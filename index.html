@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Typing Speed Test</h1>
+    <h1>Typerr</h1>
     
     <!-- Difficulty Level Selection -->
     <div>
@@ -21,7 +21,9 @@
     </div>
 
     <!-- Sentence Display -->
-    <div id="sentence-display" style="font-size: 18px; margin-top: 20px;"></div>
+    <div class="textarea">
+        <div id="sentence-display" style="font-size: 18px; margin-top: 20px; "></div>
+    </div>
 
     <!-- Input Box for Typing -->
     <textarea id="input-box" placeholder="Start typing here..." disabled></textarea>
@@ -30,7 +32,18 @@
     <div id="results" style="margin-top: 20px;">
         <p id="wpm-display"></p>
         <p id="accuracy-display"></p>
+        <div id="board" style="margin-top: 20px;">
+            <p>Leader Board</p>
+        </div>
     </div>
+
+    <!-- LeaderBoard section
+    <div class="container">
+        <div id="board" style="margin-top: 20px;">
+            <p>Leader Board</p>
+        </div>
+    </div> -->
+     
 
     <script src="script.js"></script>
 </body>
