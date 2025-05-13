@@ -35,7 +35,7 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/typerr.git
+git clone https://github.com/ExplorerSoul/Typerr.git
 cd typerr
 ```
 
@@ -102,6 +102,6 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ## ✨ Author
 
-Built by \[ExplorerSoul] – feel free to connect or drop feedback!
+Built by \ExplorerSoul – feel free to connect or drop feedback!
 
 
