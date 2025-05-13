@@ -1,8 +1,6 @@
----
-
 # 🧠 Typerr – Typing Practice for Programmers
 
-**Typerr** is a sleek, browser-based typing practice tool tailored specifically for programmers. Featuring syntax-based snippets, multiple difficulty levels, and a customizable experience, it’s the perfect playground to boost your typing speed and accuracy while staying in your coding groove.
+* **Typerr** is a sleek, browser-based typing practice tool tailored specifically for programmers. Featuring syntax-based snippets, multiple difficulty levels, and a customizable experience, it’s the perfect playground to boost your typing speed and accuracy while staying in your coding groove.
 
 ---
 
