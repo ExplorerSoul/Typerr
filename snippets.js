@@ -103,16 +103,372 @@ const codeSnippets = {
             "using System;\nusing System.Net.Http;\nusing System.Threading.Tasks;\n\npublic class ApiClient\n{\n    private readonly HttpClient _httpClient;\n    \n    public ApiClient()\n    {\n        _httpClient = new HttpClient();\n    }\n    \n    public async Task<string> FetchDataAsync(string url)\n    {\n        try\n        {\n            HttpResponseMessage response = await _httpClient.GetAsync(url);\n            response.EnsureSuccessStatusCode();\n            return await response.Content.ReadAsStringAsync();\n        }\n        catch (HttpRequestException e)\n        {\n            Console.WriteLine($\"Error fetching data: {e.Message}\");\n            return null;\n        }\n    }\n}",
             "using System;\nusing System.Threading;\nusing System.Threading.Tasks;\n\npublic class ParallelProcessor\n{\n    public async Task ProcessItemsAsync(int[] items)\n    {\n        // Process up to 4 items concurrently\n        SemaphoreSlim semaphore = new SemaphoreSlim(4);\n        List<Task> tasks = new List<Task>();\n        \n        foreach (int item in items)\n        {\n            await semaphore.WaitAsync();\n            \n            tasks.Add(Task.Run(async () => {\n                try\n                {\n                    await ProcessItemAsync(item);\n                }\n                finally\n                {\n                    semaphore.Release();\n                }\n            }));\n        }\n        \n        await Task.WhenAll(tasks);\n    }\n    \n    private async Task ProcessItemAsync(int item)\n    {\n        Console.WriteLine($\"Processing item {item}\");\n        await Task.Delay(100); // Simulate work\n    }\n}"
         ],
-        hard: [
+         hard: [
             "using System;\n\npublic class MergeSort\n{\n    public void Sort(int[] arr)\n    {\n        if (arr.Length <= 1)\n            return;\n        \n        int mid = arr.Length / 2;\n        int[] left = new int[mid];\n        int[] right = new int[arr.Length - mid];\n        \n        Array.Copy(arr, 0, left, 0, mid);\n        Array.Copy(arr, mid, right, 0, arr.Length - mid);\n        \n        Sort(left);\n        Sort(right);\n        Merge(arr, left, right);\n    }\n    \n    private void Merge(int[] arr, int[] left, int[] right)\n    {\n        int i = 0, j = 0, k = 0;\n        \n        while (i < left.Length && j < right.Length)\n        {\n            if (left[i] <= right[j])\n                arr[k++] = left[i++];\n            else\n                arr[k++] = right[j++];\n        }\n        \n        while (i < left.Length)\n            arr[k++] = left[i++];\n        \n        while (j < right.Length)\n            arr[k++] = right[j++];\n    }\n}",
             "using System;\nusing System.Collections.Generic;\n\npublic class LRUCache<TKey, TValue>\n{\n    private readonly int _capacity;\n    private readonly Dictionary<TKey, LinkedListNode<CacheItem>> _cache;\n    private readonly LinkedList<CacheItem> _lruList;\n    \n    public LRUCache(int capacity)\n    {\n        _capacity = capacity;\n        _cache = new Dictionary<TKey, LinkedListNode<CacheItem>>(capacity);\n        _lruList = new LinkedList<CacheItem>();\n    }\n    \n    public TValue Get(TKey key)\n    {\n        if (!_cache.TryGetValue(key, out var node))\n            return default;\n        \n        // Move to front (most recently used)\n        _lruList.Remove(node);\n        _lruList.AddFirst(node);\n        \n        return node.Value.Value;\n    }\n    \n    public void Put(TKey key, TValue value)\n    {\n        if (_cache.TryGetValue(key, out var existingNode))\n        {\n            // Update value and move to front\n            _lruList.Remove(existingNode);\n            var newNode = _lruList.AddFirst(new CacheItem(key, value));\n            _cache[key] = newNode;\n            return;\n        }\n        \n        // Check capacity\n        if (_cache.Count >= _capacity)\n        {\n            // Remove least recently used item\n            var last = _lruList.Last;\n            _cache.Remove(last.Value.Key);\n            _lruList.RemoveLast();\n        }\n        \n        // Add new item\n        var node = _lruList.AddFirst(new CacheItem(key, value));\n        _cache.Add(key, node);\n    }\n    \n    private class CacheItem\n    {\n        public TKey Key { get; }\n        public TValue Value { get; }\n        \n        public CacheItem(TKey key, TValue value)\n        {\n            Key = key;\n            Value = value;\n        }\n    }\n}",
             "using System;\nusing System.Collections.Generic;\nusing System.Threading;\nusing System.Threading.Tasks;\n\npublic class TaskThrottler\n{\n    private readonly SemaphoreSlim _semaphore;\n    \n    public TaskThrottler(int maxConcurrency)\n    {\n        _semaphore = new SemaphoreSlim(maxConcurrency);\n    }\n    \n    public async Task<TResult[]> ExecuteAsync<TResult>(\n        IEnumerable<Func<Task<TResult>>> taskFactories)\n    {\n        var allTasks = new List<Task<TResult>>();\n        \n        foreach (var factory in taskFactories)\n        {\n            await _semaphore.WaitAsync();\n            \n            allTasks.Add(Task.Run(async () => {\n                try\n                {\n                    return await factory();\n                }\n                finally\n                {\n                    _semaphore.Release();\n                }\n            }));\n        }\n        \n        return await Task.WhenAll(allTasks);\n    }\n}",
             "using System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic class Graph<T> where T : IEquatable<T>\n{\n    private Dictionary<T, List<Edge<T>>> _adjacencyList = new Dictionary<T, List<Edge<T>>>();\n    \n    public void AddVertex(T vertex)\n    {\n        if (!_adjacencyList.ContainsKey(vertex))\n            _adjacencyList[vertex] = new List<Edge<T>>();\n    }\n    \n    public void AddEdge(T source, T destination, int weight = 1)\n    {\n        AddVertex(source);\n        AddVertex(destination);\n        \n        _adjacencyList[source].Add(new Edge<T>(destination, weight));\n    }\n    \n    public Dictionary<T, int> Dijkstra(T start)\n    {\n        var distances = new Dictionary<T, int>();\n        var visited = new HashSet<T>();\n        var priorityQueue = new SortedList<int, T>();\n        \n        // Initialize distances\n        foreach (var vertex in _adjacencyList.Keys)\n            distances[vertex] = vertex.Equals(start) ? 0 : int.MaxValue;\n        \n        priorityQueue.Add(0, start);\n        \n        while (priorityQueue.Count > 0)\n        {\n            var current = priorityQueue.Values[0];\n            var currentDistance = priorityQueue.Keys[0];\n            priorityQueue.RemoveAt(0);\n            \n            if (visited.Contains(current))\n                continue;\n            \n            visited.Add(current);\n            \n            foreach (var edge in _adjacencyList[current])\n            {\n                if (visited.Contains(edge.Destination))\n                    continue;\n                \n                var distance = currentDistance + edge.Weight;\n                if (distance < distances[edge.Destination])\n                {\n                    distances[edge.Destination] = distance;\n                    priorityQueue.Add(distance, edge.Destination);\n                }\n            }\n        }\n        \n        return distances;\n    }\n    \n    public class Edge<TVertex>\n    {\n        public TVertex Destination { get; }\n        public int Weight { get; }\n        \n        public Edge(TVertex destination, int weight)\n        {\n            Destination = destination;\n            Weight = weight;\n        }\n    }\n}",
-            "using System;\nusing System.Collections.Generic;\nusing System.Threading;\nusing System.Threading.Tasks;\n\npublic class BatchProcessor<T>\n{\n    private readonly Func<IEnumerable<T>, Task> _processBatchAsync;\n    private readonly int _batchSize;\n    private readonly int _maxConcurrentBatches;\n    private readonly TimeSpan _maxWaitTime;\n    \n    private List<T> _currentBatch = new List<T>();\n    private SemaphoreSlim _throttler;\n    private readonly object _batchLock = new object();\n    private Timer _batchTimer;\n    \n    public BatchProcessor(\n        Func<IEnumerable<T>, Task> processBatchAsync,\n        int batchSize,\n        int maxConcurrentBatches,\n        TimeSpan maxWaitTime)\n    {\n        _processBatchAsync = processBatchAsync;\n        _batchSize = batchSize;\n        _maxConcurrentBatches = maxConcurrentBatches;\n        _maxWaitTime = maxWaitTime;\n        \n        _throttler = new SemaphoreSlim(maxConcurrentBatches);\n        _batchTimer = new Timer(OnBatchTimerElapsed, null, _maxWaitTime, Timeout.InfiniteTimeSpan);\n    }\n    \n    public async Task AddItemAsync(T item)\n    {\n        List<T> batchToProcess = null;\n        \n        lock (_batchLock)\n        {\n            _currentBatch.Add(item);\n            \n            if (_currentBatch.Count >= _batchSize)\n            {\n                batchToProcess = _currentBatch;\n                _currentBatch = new List<T>();\n                ResetBatchTimer();\n            }\n        }\n        \n        if (batchToProcess != null)\n            await ProcessBatchAsync(batchToProcess);\n    }\n    \n    private void OnBatchTimerElapsed(object state)\n    {\n        List<T> batchToProcess = null;\n        \n        lock (_batchLock)\n        {\n            if (_currentBatch.Count > 0)\n            {\n                batchToProcess = _currentBatch;\n                _currentBatch = new List<T>();\n            }\n        }\n        \n        if (batchToProcess != null)\n            ProcessBatchAsync(batchToProcess).ConfigureAwait(false).GetAwaiter().GetResult();\n    }\n    \n    private void ResetBatchTimer()\n    {\n        _batchTimer.Change(_maxWaitTime, Timeout.InfiniteTimeSpan);\n    }\n    \n    private async Task ProcessBatchAsync(List<T> batch)\n    {\n        await _throttler.WaitAsync();\n        \n        try\n        {\n            await _processBatchAsync(batch);\n        }\n        finally\n        {\n            _throttler.Release();\n        }\n    }\n    \n    public async Task FlushAsync()\n    {\n        List<T> batchToProcess = null;\n        \n        lock (_batchLock)\n        {\n            if (_currentBatch.Count > 0)\n            {\n                batchToProcess = _currentBatch;\n                _currentBatch = new List<T>();\n            }\n        }\n        \n        if (batchToProcess != null)\n            await ProcessBatchAsync(batchToProcess);\n    }\n    \n    public void Dispose()\n    {\n        _batchTimer?.Dispose();\n        _throttler?.Dispose();\n    }\n}"
+            "using System;\n" + "using System.Collections.Generic;\n" + "using System.Threading;\n" +          "using System.Threading.Tasks;\n" + "\n" +"public class BatchProcessor<T>\n" + "{\n" + "    private readonly Func<IEnumerable<T>, Task> _processBatchAsync;\n" + "    private readonly int _batchSize;\n" + "    private readonly int _maxConcurrentBatches;\n" +
+            "    private readonly TimeSpan _maxWaitTime;\n" + "    \n" + "    private List<T> _currentBatch = new List<T>();\n" + "    private SemaphoreSlim _throttler;\n" + "    private readonly object _batchLock = new object();\n" + "    private Timer _batchTimer;\n" + "    \n" + "    public BatchProcessor(\n" + "        Func<IEnumerable<T>, Task> processBatchAsync,\n" +
+            "        int batchSize,\n" + "        int maxConcurrentBatches,\n" +
+            "        TimeSpan maxWaitTime)\n" + "    {\n" + "        _processBatchAsync = processBatchAsync;\n" + "        _batchSize = batchSize;\n" + "        _maxConcurrentBatches = maxConcurrentBatches;\n" +
+            "        _maxWaitTime = maxWaitTime;\n" + "        \n" + "        _throttler = new SemaphoreSlim(maxConcurrentBatches);\n" + "        _batchTimer = new Timer(OnBatchTimerElapsed, null, _maxWaitTime, Timeout.InfiniteTimeSpan);\n" + "    }\n" + "    \n" + "    public async Task AddItemAsync(T item)\n" + "    {\n" + "        List<T> batchToProcess = null;\n" +
+            "        \n" + "        lock (_batchLock)\n" + "        {\n" + "            _currentBatch.Add(item);\n" + "            \n" + "            if (_currentBatch.Count >= _batchSize)\n" +
+            "            {\n" + "                batchToProcess = _currentBatch;\n" +
+            "                _currentBatch = new List<T>();\n" + "                ResetBatchTimer();\n" + "            }\n" + "        }\n" + "        \n" +
+            "        if (batchToProcess != null)\n" + "            await ProcessBatchAsync(batchToProcess);\n" +
+            "    }\n" + "    \n" + "    private void OnBatchTimerElapsed(object state)\n" +
+            "    {\n" + "        List<T> batchToProcess = null;\n" + "        \n" + "        lock (_batchLock)\n" + "        {\n" + "            if (_currentBatch.Count > 0)\n" + "            {\n" +
+            "                batchToProcess = _currentBatch;\n" + "                _currentBatch = new List<T>();\n" + "            }\n" + "        }\n" + "        \n" + "        if (batchToProcess != null)\n" + "            ProcessBatchAsync(batchToProcess).ConfigureAwait(false).GetAwaiter().GetResult();\n" +
+            "    }\n" +
+            "    \n" +
+            "    private void ResetBatchTimer()\n" +
+            "    {\n" +
+            "        _batchTimer.Change(_maxWaitTime, Timeout.InfiniteTimeSpan);\n" +
+            "    }\n" +
+            "    \n" +
+            "    private async Task ProcessBatchAsync(List<T> batch)\n" +
+            "    {\n" +
+            "        await _throttler.WaitAsync();\n" +
+            "        \n" +
+            "        try\n" +
+            "        {\n" +
+            "            await _processBatchAsync(batch);\n" +
+            "        }\n" +
+            "        finally\n" +
+            "        {\n" +
+            "            _throttler.Release();\n" +
+            "        }\n" +
+            "    }\n" +
+            "    \n" +
+            "    public async Task FlushAsync()\n" +
+            "    {\n" +
+            "        List<T> batchToProcess = null;\n" +
+            "        \n" +
+            "        lock (_batchLock)\n" +
+            "        {\n" +
+            "            if (_currentBatch.Count > 0)\n" +
+            "            {\n" +
+            "                batchToProcess = _currentBatch;\n" +
+            "                _currentBatch = new List<T>();\n" +
+            "            }\n" +
+            "        }\n" +
+            "        \n" +
+            "        if (batchToProcess != null)\n" +
+            "            await ProcessBatchAsync(batchToProcess);\n" +
+            "    }\n" +
+            "    \n" +
+            "    public void Dispose()\n" +
+            "    {\n" +
+            "        _batchTimer?.Dispose();\n" +
+            "        _throttler?.Dispose();\n" +
+            "    }\n" +
+            "}\n"
         ],
         expert: [
-            "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nusing System.Reflection;\nusing System.Threading.Tasks;\n\npublic class DependencyInjectionContainer\n{\n    private readonly Dictionary<Type, Func<object>> _registrations = new Dictionary<Type, Func<object>>();\n    private readonly Dictionary<Type, object> _singletons = new Dictionary<Type, object>();\n    \n    public void Register<TInterface, TImplementation>() where TImplementation : TInterface\n    {\n        _registrations[typeof(TInterface)] = () => Resolve(typeof(TImplementation));\n    }\n    \n    public void RegisterSingleton<TInterface, TImplementation>() where TImplementation : TInterface\n    {\n        _registrations[typeof(TInterface)] = () => {\n            Type type = typeof(TImplementation);\n            if (!_singletons.TryGetValue(type, out var instance))\n            {\n                instance = Resolve(type);\n                _singletons[type] = instance;\n            }\n            return instance;\n        };\n    }\n    \n    public void RegisterInstance<TInterface>(TInterface instance)\n    {\n        _registrations[typeof(TInterface)] = () => instance;\n    }\n    \n    public T Resolve<T>()\n    {\n        return (T)Resolve(typeof(T));\n    }\n    \n    private object Resolve(Type type)\n    {\n        if (_registrations.TryGetValue(type, out var factory))\n        {\n            return factory();\n        }\n        \n        if (type.IsInterface || type.IsAbstract)\n        {\n            throw new InvalidOperationException($\"Cannot instantiate abstract type {type}\");\n        }\n        \n        // Find constructor with most parameters\n        var constructor = type.GetConstructors()\n            .OrderByDescending(c => c.GetParameters().Length)\n            .FirstOrDefault();\n            \n        if (constructor == null)\n        {\n            throw new InvalidOperationException($\"No suitable constructor found for {type}\");\n        }\n        \n        // Resolve constructor parameters recursively\n        var parameters = constructor.GetParameters()\n            .Select(p => Resolve(p.ParameterType))\n            .ToArray();\n            \n        // Create instance\n        var instance = constructor.Invoke(parameters);\n        \n        // Perform property injection\n        foreach (var property in type.GetProperties()\n            .Where(p => p.CanWrite && p.GetCustomAttribute<InjectAttribute>() != null))\n        {\n            var value = Resolve(property.PropertyType);\n            property.SetValue(instance, value);\n        }\n        \n        return instance;\n    }\n    \n    [AttributeUsage(AttributeTargets.Property)]\n    public class InjectAttribute : Attribute {}\n}",
-            "using System;\nusing System.Collections.Generic;\nusing System.Threading;\nusing System.Threading.Tasks;\n\npublic class EventBus\n{\n    private readonly Dictionary<Type, List<Subscription>> _subscriptions = new Dictionary<Type, List<Subscription>>();\n    private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();\n    \n    public IDisposable Subscribe<TEvent>(Func<TEvent, Task> handler)\n    {\n        var eventType = typeof(TEvent);\n        var subscription = new Subscription<TEvent>(handler, this, eventType);\n        \n        _lock.EnterWriteLock();\n        try\n        {\n            if (!_subscriptions.TryGetValue(eventType, out var eventSubscriptions))\n            {\n                eventSubscriptions = new List<Subscription>();\n                _subscriptions[eventType] = eventSubscriptions;\n            }\n            \n            eventSubscriptions.Add(subscription);\n        }\n        finally\n        {\n            _lock.ExitWriteLock();\n        }\n        \n        return subscription;\n    }\n    \n    internal void Unsubscribe(Type eventType, Subscription subscription)\n    {\n        _lock.EnterWriteLock();\n        try\n        {\n            if (_subscriptions.TryGetValue(eventType, out var eventSubscriptions))\n            {\n                eventSubscriptions.Remove(subscription);\n                \n                if (eventSubscriptions.Count == 0)\n                    _subscriptions.Remove(eventType);\n            }\n        }\n        finally\n        {\n            _lock.ExitWriteLock();\n        }\n    }\n    \n    public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default)\n    {\n        var eventType = typeof(TEvent);\n        List<Subscription> subscribers;\n        \n        _lock.EnterReadLock();\n        try\n        {\n            if (!_subscriptions.TryGetValue(eventType, out var eventSubscriptions))\n                return;\n                \n            subscribers = new List<Subscription>(eventSubscriptions);\n        }\n        finally\n        {\n            _lock.ExitReadLock();\n        }\n        \n        var tasks = new List<Task>();\n        foreach (var subscriber in subscribers)\n        {\n            if (cancellationToken.IsCancellationRequested)\n                break;\n                \n            // Safe cast since we know the subscription is for TEvent\n            var task = ((Subscription<TEvent>)subscriber).InvokeAsync(@event);\n            tasks.Add(task);\n        }\n        \n        await Task.WhenAll(tasks);\n    }\n    \n    private abstract class Subscription : IDisposable\n    {\n        protected readonly EventBus EventBus;\n        protected readonly Type EventType;\n        \n        protected Subscription(EventBus eventBus, Type eventType)\n        {\n            EventBus = eventBus;\n            EventType = eventType;\n        }\n        \n        public void Dispose()\n        {\n            EventBus.Unsubscribe(EventType, this);\n        }\n    }\n    \n    private class Subscription<TEvent> : Subscription\n    {\n        private readonly Func<TEvent, Task> _handler;\n        \n        public Subscription(Func<TEvent, Task> handler, EventBus eventBus, Type eventType)\n            : base(eventBus, eventType)\n        {\n            _handler = handler;\n        }\n        \n        public Task InvokeAsync(TEvent @event)\n        {\n            return _handler(@event);\n        }\n    }\n}"
+
+            "using System;\n" +
+            "using System.Collections.Generic;\n" +
+            "using System.Threading;\n" +
+            "using System.Threading.Tasks;\n" +
+            "\n" +
+            "public class EventBus\n" +
+            "{\n" +
+            "    private readonly Dictionary<Type, List<Subscription>> _subscriptions = new Dictionary<Type, List<Subscription>>();\n" +
+            "    private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();\n" +
+            "    \n" +
+            "    public IDisposable Subscribe<TEvent>(Func<TEvent, Task> handler)\n" +
+            "    {\n" +
+            "        var eventType = typeof(TEvent);\n" +
+            "        var subscription = new Subscription<TEvent>(handler, this, eventType);\n" +
+            "        \n" +
+            "        _lock.EnterWriteLock();\n" +
+            "        try\n" +
+            "        {\n" +
+            "            if (!_subscriptions.TryGetValue(eventType, out var eventSubscriptions))\n" +
+            "            {\n" +
+            "                eventSubscriptions = new List<Subscription>();\n" +
+            "                _subscriptions[eventType] = eventSubscriptions;\n" +
+            "            }\n" +
+            "            \n" +
+            "            eventSubscriptions.Add(subscription);\n" +
+            "        }\n" +
+            "        finally\n" +
+            "        {\n" +
+            "            _lock.ExitWriteLock();\n" +
+            "        }\n" +
+            "        \n" +
+            "        return subscription;\n" +
+            "    }\n" +
+            "    \n" +
+            "    internal void Unsubscribe(Type eventType, Subscription subscription)\n" +
+            "    {\n" +
+            "        _lock.EnterWriteLock();\n" +
+            "        try\n" +
+            "        {\n" +
+            "            if (_subscriptions.TryGetValue(eventType, out var eventSubscriptions))\n" +
+            "            {\n" +
+            "                eventSubscriptions.Remove(subscription);\n" +
+            "                \n" +
+            "                if (eventSubscriptions.Count == 0)\n" +
+            "                    _subscriptions.Remove(eventType);\n" +
+            "            }\n" +
+            "        }\n" +
+            "        finally\n" +
+            "        {\n" +
+            "            _lock.ExitWriteLock();\n" +
+            "        }\n" +
+            "    }\n" +
+            "    \n" +
+            "    public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default)\n" +
+            "    {\n" +
+            "        var eventType = typeof(TEvent);\n" +
+            "        List<Subscription> subscribers;\n" +
+            "        \n" +
+            "        _lock.EnterReadLock();\n" +
+            "        try\n" +
+            "        {\n" +
+            "            if (!_subscriptions.TryGetValue(eventType, out var eventSubscriptions))\n" +
+            "                return;\n" +
+            "                \n" +
+            "            subscribers = new List<Subscription>(eventSubscriptions);\n" +
+            "        }\n" +
+            "        finally\n" +
+            "        {\n" +
+            "            _lock.ExitReadLock();\n" +
+            "        }\n" +
+            "        \n" +
+            "        var tasks = new List<Task>();\n" +
+            "        foreach (var subscriber in subscribers)\n" +
+            "        {\n" +
+            "            if (cancellationToken.IsCancellationRequested)\n" +
+            "                break;\n" +
+            "                \n" +
+            "            // Safe cast since we know the subscription is for TEvent\n" +
+            "            var task = ((Subscription<TEvent>)subscriber).InvokeAsync(@event);\n" +
+            "            tasks.Add(task);\n" +
+            "        }\n" +
+            "        \n" +
+            "        await Task.WhenAll(tasks);\n" +
+            "    }\n" +
+            "    \n" +
+            "    private abstract class Subscription : IDisposable\n" +
+            "    {\n" +
+            "        protected readonly EventBus EventBus;\n" +
+            "        protected readonly Type EventType;\n" +
+            "        \n" +
+            "        protected Subscription(EventBus eventBus, Type eventType)\n" +
+            "        {\n" +
+            "            EventBus = eventBus;\n" +
+            "            EventType = eventType;\n" +
+            "        }\n" +
+            "        \n" +
+            "        public void Dispose()\n" +
+            "        {\n" +
+            "            EventBus.Unsubscribe(EventType, this);\n" +
+            "        }\n" +
+            "    }\n" +
+            "    \n" +
+            "    private class Subscription<TEvent> : Subscription\n" +
+            "    {\n" +
+            "        private readonly Func<TEvent, Task> _handler;\n" +
+            "        \n" +
+            "        public Subscription(Func<TEvent, Task> handler, EventBus eventBus, Type eventType)\n" +
+            "            : base(eventBus, eventType)\n" +
+            "        {\n" +
+            "            _handler = handler;\n" +
+            "        }\n" +
+            "        \n" +
+            "        public Task InvokeAsync(TEvent @event)\n" +
+            "        {\n" +
+            "            return _handler(@event);\n" +
+            "        }\n" +
+            "    }\n" +
+            "}\n",
+            
+            "using System;\n" +
+            "using System.Collections.Generic;\n" +
+            "using System.Linq;\n" +
+            "using System.Reflection;\n" +
+            "using System.Threading.Tasks;\n" +
+            "\n" +
+            "public class DependencyInjectionContainer\n" +
+            "{\n" +
+            "    private readonly Dictionary<Type, Func<object>> _registrations = new Dictionary<Type, Func<object>>();\n" +
+            "    private readonly Dictionary<Type, object> _singletons = new Dictionary<Type, object>();\n" +
+            "    \n" +
+            "    public void Register<TInterface, TImplementation>() where TImplementation : TInterface\n" +
+            "    {\n" +
+            "        _registrations[typeof(TInterface)] = () => Resolve(typeof(TImplementation));\n" +
+            "    }\n" +
+            "    \n" +
+            "    public void RegisterSingleton<TInterface, TImplementation>() where TImplementation : TInterface\n" +
+            "    {\n" +
+            "        _registrations[typeof(TInterface)] = () => {\n" +
+            "            Type type = typeof(TImplementation);\n" +
+            "            if (!_singletons.TryGetValue(type, out var instance))\n" +
+            "            {\n" +
+            "                instance = Resolve(type);\n" +
+            "                _singletons[type] = instance;\n" +
+            "            }\n" +
+            "            return instance;\n" +
+            "        };\n" +
+            "    }\n" +
+            "    \n" +
+            "    public void RegisterInstance<TInterface>(TInterface instance)\n" +
+            "    {\n" +
+            "        _registrations[typeof(TInterface)] = () => instance;\n" +
+            "    }\n" +
+            "    \n" +
+            "    public T Resolve<T>()\n" +
+            "    {\n" +
+            "        return (T)Resolve(typeof(T));\n" +
+            "    }\n" +
+            "    \n" +
+            "    private object Resolve(Type type)\n" +
+            "    {\n" +
+            "        if (_registrations.TryGetValue(type, out var factory))\n" +
+            "        {\n" +
+            "            return factory();\n" +
+            "        }\n" +
+            "        \n" +
+            "        if (type.IsInterface || type.IsAbstract)\n" +
+            "        {\n" +
+            "            throw new InvalidOperationException($\"Cannot instantiate abstract type {type}\");\n" +
+            "        }\n" +
+            "        \n" +
+            "        // Find constructor with most parameters\n" +
+            "        var constructor = type.GetConstructors()\n" +
+            "            .OrderByDescending(c => c.GetParameters().Length)\n" +
+            "            .FirstOrDefault();\n" +
+            "            \n" +
+            "        if (constructor == null)\n" +
+            "        {\n" +
+            "            throw new InvalidOperationException($\"No suitable constructor found for {type}\");\n" +
+            "        }\n" +
+            "        \n" +
+            "        // Resolve constructor parameters recursively\n" +
+            "        var parameters = constructor.GetParameters()\n" +
+            "            .Select(p => Resolve(p.ParameterType))\n" +
+            "            .ToArray();\n" +
+            "            \n" +
+            "        // Create instance\n" +
+            "        var instance = constructor.Invoke(parameters);\n" +
+            "        \n" +
+            "        // Perform property injection\n" +
+            "        foreach (var property in type.GetProperties()\n" +
+            "            .Where(p => p.CanWrite && p.GetCustomAttribute<InjectAttribute>() != null))\n" +
+            "        {\n" +
+            "            var value = Resolve(property.PropertyType);\n" +
+            "            property.SetValue(instance, value);\n" +
+            "        }\n" +
+            "        \n" +
+            "        return instance;\n" +
+            "    }\n" +
+            "    \n" +
+            "    [AttributeUsage(AttributeTargets.Property)]\n" +
+            "    public class InjectAttribute : Attribute {}\n" +
+            "}\n"
+        ]  
+    },
+    php: {
+        easy: [
+            "<?php\n\necho \"Hello, World!\";\n",
+            "<?php\n\nfunction isEven($number) {\n    return $number % 2 === 0;\n}\n",
+            "<?php\n\nfunction sum($a, $b) {\n    return $a + $b;\n}\n",
+            "<?php\n\nclass Person {\n    public $name;\n    public $age;\n\n    public function __construct($name, $age) {\n        $this->name = $name;\n        $this->age = $age;\n    }\n\n    public function greet() {\n        echo \"Hello, my name is {$this->name} and I am {$this->age} years old.\";\n    }\n}\n",
+            "<?php\n\nfunction printList(array $items) {\n    foreach ($items as $item) {\n        echo $item . \"\\n\";\n    }\n}\n"
+        ],
+
+        medium: [
+            "<?php\n\n\$optionalName = \"Alice\";\nif (isset(\$optionalName)) {\n    echo \"Hello, {\$optionalName}!\";\n} else {\n    echo \"No name provided\";\n}\n",
+            "<?php\n\nclass Rectangle {\n    public \$width;\n    public \$height;\n\n    public function __construct(\$width, \$height) {\n        \$this->width = \$width;\n        \$this->height = \$height;\n    }\n\n    public function area() {\n        return \$this->width * \$this->height;\n    }\n}\n\n\$rect = new Rectangle(10, 5);\necho \"Area: \" . \$rect->area();\n",
+            "<?php\n\n\$numbers = [1, 2, 3, 4, 5];\nforeach (\$numbers as \$number) {\n    echo \$number * \$number . \"\\n\";\n}\n",
+            "<?php\n\nenum Direction {\n    case NORTH;\n    case SOUTH;\n    case EAST;\n    case WEST;\n}\n\nfunction move(Direction \$direction) {\n    switch (\$direction) {\n        case Direction::NORTH:\n            echo \"Moving north\";\n            break;\n        case Direction::SOUTH:\n            echo \"Moving south\";\n            break;\n        case Direction::EAST:\n            echo \"Moving east\";\n            break;\n        case Direction::WEST:\n            echo \"Moving west\";\n            break;\n    }\n}\n\nmove(Direction::EAST);\n",
+            "<?php\n\nfunction factorial(\$n) {\n    if (\$n <= 1) {\n        return 1;\n    } else {\n        return \$n * factorial(\$n - 1);\n    }\n}\necho factorial(5);\n"
+        ],
+
+        hard: [
+            "<?php\n\nclass Vehicle {\n    public function description() {\n        return \"A vehicle\";\n    }\n}\n\nclass Car extends Vehicle {\n    public function description() {\n        return \"A car\";\n    }\n}\n\n\$myCar = new Car();\necho \$myCar->description();\n",
+            "<?php\n\nclass FileNotFoundException extends Exception {}\n\nfunction readFile(\$filename) {\n    if (\$filename !== \"exists.txt\") {\n        throw new FileNotFoundException(\"File not found\");\n    }\n    return \"File content\";\n}\n\ntry {\n    \$content = readFile(\"missing.txt\");\n    echo \$content;\n} catch (FileNotFoundException \$e) {\n    echo \"Error reading file: \" . \$e->getMessage();\n}\n",
+            "<?php\n\n\$names = [\"Anna\", \"John\", \"Zoe\", \"Mark\"];\nrsort(\$names);\necho implode(\", \", \$names);\n",
+            "<?php\n\nclass Stack {\n    private array \$items = [];\n\n    public function push(\$item) {\n        array_push(\$this->items, \$item);\n    }\n\n    public function pop() {\n        return array_pop(\$this->items);\n    }\n}\n\n\$stack = new Stack();\n\$stack->push(10);\n\$stack->push(20);\necho \$stack->pop() ?? \"Empty\";\n",
+            "<?php\n\nfunction fibonacci(\$n) {\n    if (\$n <= 1) {\n        return \$n;\n    }\n    return fibonacci(\$n - 1) + fibonacci(\$n - 2);\n}\necho fibonacci(7);\n"
+        ],
+
+        expert: [
+            "<?php\n\ninterface Drawable {\n    public function draw();\n}\n\nclass Circle implements Drawable {\n    public function draw() {\n        echo \"Drawing a circle\";\n    }\n}\n\n\$shape = new Circle();\n\$shape->draw();\n",
+            "<?php\n\nfunction swapTwoValues(&\$a, &\$b) {\n    \$temp = \$a;\n    \$a = \$b;\n    \$b = \$temp;\n}\n\n\$x = 5;\n\$y = 10;\nswapTwoValues(\$x, \$y);\necho \"x: {\$x}, y: {\$y}\";\n",
+            "<?php\n\n// Async example with promises (using ReactPHP or similar library)\n// This is a placeholder as PHP doesn't have native async/await\n\n// Pseudo-code:\n// $promise = asyncFunction();\n// $promise->then(function(\$result) {\n//     echo \$result;\n// });\n",
+            "<?php\n\nclass AsyncOperation {\n    public function perform(callable \$completion) {\n        // Simulate async with sleep in separate thread/process\n        // PHP doesn't have native threads, so this is illustrative\n        sleep(2);\n        \$completion(\"Operation complete\");\n    }\n}\n\n\$op = new AsyncOperation();\n\$op->perform(function(\$result) {\n    echo \$result;\n});\n",
+            "<?php\n\nclass Result {\n    public \$value;\n    public \$error;\n\n    public function __construct(\$value = null, \$error = null) {\n        \$this->value = \$value;\n        \$this->error = \$error;\n    }\n}\n"
         ]
-    }
+    },
+
+    swift: {
+        easy: [
+            "print(\"Hello, World!\")",
+            "func isEven(_ number: Int) -> Bool {\n    return number % 2 == 0\n}",
+            "func sum(_ a: Int, _ b: Int) -> Int {\n    return a + b\n}",
+            "struct Person {\n    var name: String\n    var age: Int\n\n    func greet() {\n        print(\"Hello, my name is \\(name) and I am \\(age) years old.\")\n    }\n}",
+            "func printList<T>(_ items: [T]) {\n    for item in items {\n        print(item)\n    }\n}"
+        ],
+
+        medium: [
+            "var optionalName: String? = \"Alice\"\nif let name = optionalName {\n    print(\"Hello, \\(name)!\")\n} else {\n    print(\"No name provided\")\n}",
+            "struct Rectangle {\n    var width: Double\n    var height: Double\n\n    func area() -> Double {\n        return width * height\n    }\n}\nlet rect = Rectangle(width: 10, height: 5)\nprint(\"Area: \\(rect.area())\")",
+            "let numbers = [1, 2, 3, 4, 5]\nfor number in numbers {\n    print(number * number)\n}",
+            "enum Direction {\n    case north, south, east, west\n}\nfunc move(_ direction: Direction) {\n    switch direction {\n    case .north: print(\"Moving north\")\n    case .south: print(\"Moving south\")\n    case .east: print(\"Moving east\")\n    case .west: print(\"Moving west\")\n    }\n}\nmove(.east)",
+            "func factorial(_ n: Int) -> Int {\n    if n <= 1 {\n        return 1\n    } else {\n        return n * factorial(n - 1)\n    }\n}\nprint(factorial(5))"
+        ],
+
+        hard: [
+            "class Vehicle {\n    func description() -> String {\n        return \"A vehicle\"\n    }\n}\nclass Car: Vehicle {\n    override func description() -> String {\n        return \"A car\"\n    }\n}\nlet myCar = Car()\nprint(myCar.description())",
+            "enum FileError: Error {\n    case fileNotFound\n}\nfunc readFile(filename: String) throws -> String {\n    if filename != \"exists.txt\" {\n        throw FileError.fileNotFound\n    }\n    return \"File content\"\n}\ndo {\n    let content = try readFile(filename: \"missing.txt\")\n    print(content)\n} catch {\n    print(\"Error reading file: \\(error)\")\n}",
+            "let names = [\"Anna\", \"John\", \"Zoe\", \"Mark\"]\nlet sortedNames = names.sorted { $0 > $1 }\nprint(sortedNames)",
+            "struct Stack<Element> {\n    private var items = [Element]()\n\n    mutating func push(_ item: Element) {\n        items.append(item)\n    }\n\n    mutating func pop() -> Element? {\n        return items.popLast()\n    }\n}\nvar stack = Stack<Int>()\nstack.push(10)\nstack.push(20)\nprint(stack.pop() ?? \"Empty\")",
+            "func fibonacci(_ n: Int) -> Int {\n    if n <= 1 {\n        return n\n    }\n    return fibonacci(n - 1) + fibonacci(n - 2)\n}\nprint(fibonacci(7))"
+        ],
+
+        expert: [
+            "protocol Drawable {\n    func draw()\n}\nextension Drawable {\n    func draw() {\n        print(\"Default drawing\")\n    }\n}\nstruct Circle: Drawable {\n    func draw() {\n        print(\"Drawing a circle\")\n    }\n}\nlet shape: Drawable = Circle()\nshape.draw()",
+            "func swapTwoValues<T>(_ a: inout T, _ b: inout T) {\n    let temp = a\n    a = b\n    b = temp\n}\nvar x = 5\nvar y = 10\nswapTwoValues(&x, &y)\nprint(\"x: \\(x), y: \\(y)\")",
+            "import Foundation\n\nfunc fetchData() async -> String {\n    await Task.sleep(2 * 1_000_000_000)\n    return \"Data fetched\"\n}\n\nTask {\n    let result = await fetchData()\n    print(result)\n}",
+            "class AsyncOperation {\n    func perform(completion: @escaping (String) -> Void) {\n        DispatchQueue.global().async {\n            sleep(2)\n            completion(\"Operation complete\")\n        }\n    }\n}\nlet op = AsyncOperation()\nop.perform { result in\n    print(result)\n}",
+            "struct Result<Value, Error: Swift.Error> {\n    let value: Value?\n    let error: Error?\n}"
+        ]
+    },
+    ruby: {
+        easy: [
+            "puts \"Hello, World!\"",
+            "def is_even(number)\n  number % 2 == 0\nend",
+            "def sum(a, b)\n  a + b\nend",
+            "class Person\n  attr_accessor :name, :age\n\n  def initialize(name, age)\n    @name = name\n    @age = age\n  end\n\n  def greet\n    puts \"Hello, my name is #{@name} and I am #{@age} years old.\"\n  end\nend",
+            "def print_list(items)\n  items.each do |item|\n    puts item\n  end\nend"
+        ],
+
+        medium: [
+            "optional_name = \"Alice\"\nif optional_name\n  puts \"Hello, #{optional_name}!\"\nelse\n  puts \"No name provided\"\nend",
+            "class Rectangle\n  attr_accessor :width, :height\n\n  def initialize(width, height)\n    @width = width\n    @height = height\n  end\n\n  def area\n    width * height\n  end\nend\nrect = Rectangle.new(10, 5)\nputs \"Area: #{rect.area}\"",
+            "numbers = [1, 2, 3, 4, 5]\nnumbers.each do |number|\n  puts number * number\nend",
+            "module Direction\n  NORTH = :north\n  SOUTH = :south\n  EAST = :east\n  WEST = :west\nend\n\ndef move(direction)\n  case direction\n  when Direction::NORTH\n    puts \"Moving north\"\n  when Direction::SOUTH\n    puts \"Moving south\"\n  when Direction::EAST\n    puts \"Moving east\"\n  when Direction::WEST\n    puts \"Moving west\"\n  end\nend\nmove(Direction::EAST)",
+            "def factorial(n)\n  return 1 if n <= 1\n  n * factorial(n - 1)\nend\nputs factorial(5)"
+        ],
+
+        hard: [
+            "class Vehicle\n  def description\n    \"A vehicle\"\n  end\nend\n\nclass Car < Vehicle\n  def description\n    \"A car\"\n  end\nend\n\nmy_car = Car.new\nputs my_car.description",
+            "class FileError < StandardError; end\n\ndef read_file(filename)\n  raise FileError, \"File not found\" unless filename == \"exists.txt\"\n  \"File content\"\nend\n\nbegin\n  content = read_file(\"missing.txt\")\n  puts content\nrescue FileError => e\n  puts \"Error reading file: #{e.message}\"\nend",
+            "names = [\"Anna\", \"John\", \"Zoe\", \"Mark\"]\nsorted_names = names.sort.reverse\nputs sorted_names",
+            "class Stack\n  def initialize\n    @items = []\n  end\n\n  def push(item)\n    @items.push(item)\n  end\n\n  def pop\n    @items.pop\n  end\nend\n\nstack = Stack.new\nstack.push(10)\nstack.push(20)\nputs stack.pop || \"Empty\"",
+            "def fibonacci(n)\n  return n if n <= 1\n  fibonacci(n - 1) + fibonacci(n - 2)\nend\nputs fibonacci(7)"
+        ],
+
+        expert: [
+            "module Drawable\n  def draw\n    puts \"Default drawing\"\n  end\nend\n\nclass Circle\n  include Drawable\n\n  def draw\n    puts \"Drawing a circle\"\n  end\nend\n\nshape = Circle.new\nshape.draw",
+            "def swap_two_values(a, b)\n  return b, a\nend\n\nx = 5\n y = 10\nx, y = swap_two_values(x, y)\nputs \"x: #{x}, y: #{y}\"",
+            "require 'concurrent-ruby'\n\npromise = Concurrent::Promise.execute do\n  sleep 2\n  \"Data fetched\"\nend\n\npromise.then do |result|\n  puts result\nend\n\npromise.wait",
+            "class AsyncOperation\n  def perform(&completion)\n    Thread.new do\n      sleep 2\n      completion.call(\"Operation complete\")\n    end\n  end\nend\n\nop = AsyncOperation.new\nop.perform do |result|\n  puts result\nend",
+            "Result = Struct.new(:value, :error)"
+        ]
+    } 
 };
