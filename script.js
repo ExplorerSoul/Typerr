@@ -30,7 +30,7 @@ let errorCount = 0;
 let timeLimit = 60; // Default time limit in seconds
 let practiceMode = 'standard'; // Default practice mode
 let currentLanguage = 'javascript'; // Default language
-let typingHistory = JSON.parse(localStorage.getItem('codeTypeHistory')) || [];
+let typingHistory = JSON.parse(localStorage.getItem('TyperrHistory')) || [];
 
 // Initialize the application
 function initialize() {
@@ -46,10 +46,10 @@ function initialize() {
 
 // Load saved settings from localStorage
 function loadSettings() {
-    const savedLanguage = localStorage.getItem('codeTypeLanguage');
-    const savedDifficulty = localStorage.getItem('codeTypeDifficulty');
-    const savedTimeLimit = localStorage.getItem('codeTypeTimeLimit');
-    const savedMode = localStorage.getItem('codeTypeMode');
+    const savedLanguage = localStorage.getItem('TyperrLanguage');
+    const savedDifficulty = localStorage.getItem('TyperrDifficulty');
+    const savedTimeLimit = localStorage.getItem('TyperrTimeLimit');
+    const savedMode = localStorage.getItem('TyperrMode');
     
     if (savedLanguage) languageSelect.value = savedLanguage;
     if (savedDifficulty) difficultySelect.value = savedDifficulty;
@@ -64,10 +64,10 @@ function loadSettings() {
 
 // Save current settings to localStorage
 function saveSettings() {
-    localStorage.setItem('codeTypeLanguage', languageSelect.value);
-    localStorage.setItem('codeTypeDifficulty', difficultySelect.value);
-    localStorage.setItem('codeTypeTimeLimit', timeSelect.value);
-    localStorage.setItem('codeTypeMode', modeSelect.value);
+    localStorage.setItem('TyperrLanguage', languageSelect.value);
+    localStorage.setItem('TyperrDifficulty', difficultySelect.value);
+    localStorage.setItem('TyperrTimeLimit', timeSelect.value);
+    localStorage.setItem('TyperrMode', modeSelect.value);
 }
 
 // Bind event listeners
@@ -344,7 +344,7 @@ function endPractice() {
     }
     
     // Save to local storage
-    localStorage.setItem('codeTypeHistory', JSON.stringify(typingHistory));
+    localStorage.setItem('TyperrHistory', JSON.stringify(typingHistory));
     
     // Update history display
     displayHistory();
@@ -354,8 +354,8 @@ function endPractice() {
 function resetPractice() {
     clearInterval(timer);
     isRunning = false;
-    startButton.disabled = false;
-    resetButton.disabled = false;
+    startButton.disabled = false;  // Enable Start button
+    resetButton.disabled = false;  // Enable Reset button
     codeInput.disabled = true;
     codeInput.value = '';
     
@@ -367,10 +367,13 @@ function resetPractice() {
     timeValue.textContent = '0s';
     errorsValue.textContent = '0';
     
-    codeDisplay.innerHTML = 'Select a language and click "Start" to begin typing practice...';
+    codeDisplay.innerHTML = 'Select a language and click "Start" to begin practice...';
+    
+    // Hide the overlay so Start button is clickable
+    overlay.style.display = 'none';  // <-- Change this from 'flex' to 'none'
     overlay.textContent = 'Ready?';
-    overlay.style.display = 'flex';
 }
+
 
 // Display typing history
 function displayHistory() {
