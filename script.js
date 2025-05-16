@@ -308,24 +308,24 @@ function endPractice() {
     isRunning = false;
     startButton.disabled = false;
     codeInput.disabled = true;
-    
+
     const practiceTime = (endTime - startTime) / 1000;
     const { wpm, accuracy } = calculatePerformance(practiceTime);
-    
+
     // Show completion message
     overlay.textContent = 'Complete!';
     overlay.style.display = 'flex';
     setTimeout(() => {
         overlay.style.display = 'none';
     }, 2000);
-    
+
     // Highlight results panel
     resultsPanel.classList.add('highlight');
     setTimeout(() => {
         resultsPanel.classList.remove('highlight');
     }, 3000);
-    
-    // Save result to history
+
+    // Prepare result data
     const result = {
         date: new Date().toLocaleDateString(),
         language: currentLanguage,
@@ -335,20 +335,26 @@ function endPractice() {
         time: Math.round(practiceTime),
         mode: practiceMode
     };
-    
-    typingHistory.unshift(result);
-    
-    // Keep only the last 20 results
-    if (typingHistory.length > 20) {
-        typingHistory.pop();
-    }
-    
-    // Save to local storage
-    localStorage.setItem('TyperrHistory', JSON.stringify(typingHistory));
-    
-    // Update history display
-    displayHistory();
+
+    // Send result to backend
+    fetch('https://typerr-backend.onrender.com/api/sessions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(result),
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log('✅ Session saved to backend:', data);
+        displayHistory(); // Refresh history from backend
+    })
+    .catch(err => {
+        console.error('❌ Failed to save session:', err);
+        // Optionally show fallback message to user
+    });
 }
+
 
 // Reset the typing practice
 function resetPractice() {
@@ -378,58 +384,60 @@ function resetPractice() {
 // Display typing history
 function displayHistory() {
     historyData.innerHTML = '';
-    
-    if (typingHistory.length === 0) {
-        const emptyRow = document.createElement('tr');
-        const emptyCell = document.createElement('td');
-        emptyCell.colSpan = 6;
-        emptyCell.textContent = 'No practice history available yet';
-        emptyCell.classList.add('empty-history');
-        emptyRow.appendChild(emptyCell);
-        historyData.appendChild(emptyRow);
-        return;
-    }
-    
-    typingHistory.forEach((record, index) => {
-        const row = document.createElement('tr');
-        
-        // Add date
-        const dateCell = document.createElement('td');
-        dateCell.textContent = record.date;
-        row.appendChild(dateCell);
-        
-        // Add language
-        const langCell = document.createElement('td');
-        langCell.textContent = record.language;
-        row.appendChild(langCell);
-        
-        // Add difficulty
-        const diffCell = document.createElement('td');
-        diffCell.textContent = record.difficulty;
-        row.appendChild(diffCell);
-        
-        // Add WPM
-        const wpmCell = document.createElement('td');
-        wpmCell.textContent = record.wpm;
-        row.appendChild(wpmCell);
-        
-        // Add accuracy
-        const accCell = document.createElement('td');
-        accCell.textContent = `${record.accuracy}%`;
-        row.appendChild(accCell);
-        
-        // Add time
-        const timeCell = document.createElement('td');
-        timeCell.textContent = `${record.time}s`;
-        row.appendChild(timeCell);
-        
-        if (index === 0) {
-            row.classList.add('latest-result');
-        }
-        
-        historyData.appendChild(row);
-    });
+
+    fetch('https://typerr-backend.onrender.com/api/sessions')
+        .then(res => res.json())
+        .then(data => {
+            if (!data.length) {
+                const emptyRow = document.createElement('tr');
+                const emptyCell = document.createElement('td');
+                emptyCell.colSpan = 6;
+                emptyCell.textContent = 'No practice history available yet';
+                emptyCell.classList.add('empty-history');
+                emptyRow.appendChild(emptyCell);
+                historyData.appendChild(emptyRow);
+                return;
+            }
+
+            data.forEach((record, index) => {
+                const row = document.createElement('tr');
+
+                const dateCell = document.createElement('td');
+                dateCell.textContent = record.date;
+                row.appendChild(dateCell);
+
+                const langCell = document.createElement('td');
+                langCell.textContent = record.language;
+                row.appendChild(langCell);
+
+                const diffCell = document.createElement('td');
+                diffCell.textContent = record.difficulty;
+                row.appendChild(diffCell);
+
+                const wpmCell = document.createElement('td');
+                wpmCell.textContent = record.wpm;
+                row.appendChild(wpmCell);
+
+                const accCell = document.createElement('td');
+                accCell.textContent = `${record.accuracy}%`;
+                row.appendChild(accCell);
+
+                const timeCell = document.createElement('td');
+                timeCell.textContent = `${record.time}s`;
+                row.appendChild(timeCell);
+
+                if (index === 0) {
+                    row.classList.add('latest-result');
+                }
+
+                historyData.appendChild(row);
+            });
+        })
+        .catch(err => {
+            console.error('❌ Failed to load history:', err);
+        });
 }
+
 
 // Get code snippet based on language and difficulty
 function getCodeSnippet(language, difficulty) {
