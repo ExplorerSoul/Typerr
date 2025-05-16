@@ -34,6 +34,10 @@ let typingHistory = JSON.parse(localStorage.getItem('TyperrHistory')) || [];
 
 // Initialize the application
 function initialize() {
+    // Check authentication first - but don't return early
+    // This allows the app to continue loading while token validation happens in background
+    checkAuthStatus();
+    
     // Load settings
     loadSettings();
     
@@ -42,6 +46,35 @@ function initialize() {
     
     // Bind events
     bindEvents();
+    
+    // Add some CSS for the user info in header
+    const style = document.createElement('style');
+    style.textContent = `
+        .user-info {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #a9a9a9;
+        }
+        
+        .btn-small {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .btn-small:hover {
+            background-color: #3a7bcc;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 // Load saved settings from localStorage
@@ -68,6 +101,77 @@ function saveSettings() {
     localStorage.setItem('TyperrDifficulty', difficultySelect.value);
     localStorage.setItem('TyperrTimeLimit', timeSelect.value);
     localStorage.setItem('TyperrMode', modeSelect.value);
+}
+
+// Check authentication status
+function checkAuthStatus() {
+    const token = localStorage.getItem('typerrToken');
+    
+    // If no token, redirect to login page
+    if (!token) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    // https://typerr-backend.onrender.com/api/auth/validate --> for render
+    // http://localhost:5000/api/auth/validate --> localstorage
+
+    // Validate token with backend
+    fetch('https://typerr-backend.onrender.com/api/auth/validate', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(res => {
+        if (!res.ok) {
+            // Token is invalid, redirect to login
+            console.log('❌ Authentication token invalid');
+            localStorage.removeItem('typerrToken');
+            window.location.href = 'login.html';
+        } else {
+            console.log('✅ Authentication valid');
+            // Optionally update UI to show logged-in status
+            updateUserUI();
+        }
+    })
+    .catch(err => {
+        console.error('❌ Error validating authentication:', err);
+        // Continue with app but don't update UI
+    });
+    
+    return true;
+}
+
+// Update UI based on user login status
+function updateUserUI() {
+    // Get user data if available
+    const userData = localStorage.getItem('typerrUser');
+    if (userData) {
+        try {
+            const user = JSON.parse(userData);
+            
+            // Create a user info section in the header
+            const header = document.querySelector('header');
+            const userInfo = document.createElement('div');
+            userInfo.className = 'user-info';
+            userInfo.innerHTML = `
+                <span>Logged in as: ${user.email || 'User'}</span>
+                <button id="logout-btn" class="btn-small">Logout</button>
+            `;
+            
+            header.appendChild(userInfo);
+            
+            // Add logout functionality
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                localStorage.removeItem('typerrToken');
+                localStorage.removeItem('typerrUser');
+                window.location.href = 'login.html';
+            });
+            
+        } catch (e) {
+            console.error('Error parsing user data:', e);
+        }
+    }
 }
 
 // Bind event listeners
@@ -301,7 +405,7 @@ function calculatePerformance(elapsedTime) {
     return { wpm, accuracy, elapsedTime };
 }
 
-// End the typing practice
+/// End the typing practice
 function endPractice() {
     clearInterval(timer);
     endTime = Date.now();
@@ -336,15 +440,38 @@ function endPractice() {
         mode: practiceMode
     };
 
+    // Get auth token from localStorage
+    const token = localStorage.getItem('typerrToken');
+    
+    // Prepare headers with authorization token
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    
+    // Add authorization header if token exists
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    } else {
+        // Redirect to login if no token
+        console.log('❌ No authentication token found');
+        window.location.href = 'login.html';
+        return;
+    }
     // Send result to backend
     fetch('https://typerr-backend.onrender.com/api/sessions', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: headers,
         body: JSON.stringify(result),
     })
-    .then(res => res.json())
+    .then(res => {
+        if (res.status === 401) {
+            // Redirect to login page if unauthorized
+            console.log('❌ Authentication expired or invalid');
+            window.location.href = 'login.html';
+            throw new Error('Unauthorized - Please log in');
+        }
+        return res.json();
+    })
     .then(data => {
         console.log('✅ Session saved to backend:', data);
         displayHistory(); // Refresh history from backend
@@ -384,58 +511,93 @@ function resetPractice() {
 // Display typing history
 function displayHistory() {
     historyData.innerHTML = '';
+    
+    // Get auth token from localStorage
+    const token = localStorage.getItem('typerrToken');
+    
+    // Prepare headers with authorization token
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    
+    // Add authorization header if token exists
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
 
-    fetch('https://typerr-backend.onrender.com/api/sessions')
-        .then(res => res.json())
-        .then(data => {
-            if (!data.length) {
-                const emptyRow = document.createElement('tr');
-                const emptyCell = document.createElement('td');
-                emptyCell.colSpan = 6;
-                emptyCell.textContent = 'No practice history available yet';
-                emptyCell.classList.add('empty-history');
-                emptyRow.appendChild(emptyCell);
-                historyData.appendChild(emptyRow);
-                return;
+    fetch('https://typerr-backend.onrender.com/api/sessions', {
+        method: 'GET',
+        headers: headers
+    })
+    .then(res => {
+        // Handle unauthorized response
+        if (res.status === 401) {
+            // Redirect to login page if unauthorized
+            window.location.href = 'login.html';
+            throw new Error('Unauthorized - Please log in');
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (!data.length) {
+            const emptyRow = document.createElement('tr');
+            const emptyCell = document.createElement('td');
+            emptyCell.colSpan = 6;
+            emptyCell.textContent = 'No practice history available yet';
+            emptyCell.classList.add('empty-history');
+            emptyRow.appendChild(emptyCell);
+            historyData.appendChild(emptyRow);
+            return;
+        }
+
+        data.forEach((record, index) => {
+            const row = document.createElement('tr');
+
+            const dateCell = document.createElement('td');
+            dateCell.textContent = record.date;
+            row.appendChild(dateCell);
+
+            const langCell = document.createElement('td');
+            langCell.textContent = record.language;
+            row.appendChild(langCell);
+
+            const diffCell = document.createElement('td');
+            diffCell.textContent = record.difficulty;
+            row.appendChild(diffCell);
+
+            const wpmCell = document.createElement('td');
+            wpmCell.textContent = record.wpm;
+            row.appendChild(wpmCell);
+
+            const accCell = document.createElement('td');
+            accCell.textContent = `${record.accuracy}%`;
+            row.appendChild(accCell);
+
+            const timeCell = document.createElement('td');
+            timeCell.textContent = `${record.time}s`;
+            row.appendChild(timeCell);
+
+            if (index === 0) {
+                row.classList.add('latest-result');
             }
 
-            data.forEach((record, index) => {
-                const row = document.createElement('tr');
-
-                const dateCell = document.createElement('td');
-                dateCell.textContent = record.date;
-                row.appendChild(dateCell);
-
-                const langCell = document.createElement('td');
-                langCell.textContent = record.language;
-                row.appendChild(langCell);
-
-                const diffCell = document.createElement('td');
-                diffCell.textContent = record.difficulty;
-                row.appendChild(diffCell);
-
-                const wpmCell = document.createElement('td');
-                wpmCell.textContent = record.wpm;
-                row.appendChild(wpmCell);
-
-                const accCell = document.createElement('td');
-                accCell.textContent = `${record.accuracy}%`;
-                row.appendChild(accCell);
-
-                const timeCell = document.createElement('td');
-                timeCell.textContent = `${record.time}s`;
-                row.appendChild(timeCell);
-
-                if (index === 0) {
-                    row.classList.add('latest-result');
-                }
-
-                historyData.appendChild(row);
-            });
-        })
-        .catch(err => {
-            console.error('❌ Failed to load history:', err);
+            historyData.appendChild(row);
         });
+    })
+    .catch(err => {
+        console.error('❌ Failed to load history:', err);
+        
+        // Show error message in history area if not redirecting
+        if (!err.message.includes('Unauthorized')) {
+            const errorRow = document.createElement('tr');
+            const errorCell = document.createElement('td');
+            errorCell.colSpan = 6;
+            errorCell.textContent = 'Failed to load history. Please try again later.';
+            errorCell.classList.add('empty-history');
+            errorRow.appendChild(errorCell);
+            historyData.appendChild(errorRow);
+        }
+    });
 }
 
 
