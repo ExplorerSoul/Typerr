@@ -175,6 +175,8 @@
 
   <script src="snippets.js"></script>
   <script src="script.js"></script>
+
+  <!-- ✅ Inline script runs AFTER external scripts are fully loaded -->
   <script>
     // Dynamically update user info and add Setup Profile and Logout buttons
     function updateUserUI() {
@@ -207,35 +209,39 @@
       }
     }
 
-    // On page load, check auth and update UI accordingly
-    document.addEventListener('DOMContentLoaded', () => {
-      // Validate token with backend
+    // ✅ Wait for DOM AND script.js to load
+    window.addEventListener('load', () => {
       const token = localStorage.getItem('typerrToken');
       if (!token) {
         window.location.href = 'login.html';
         return;
       }
+
       fetch('https://typerr-backend.onrender.com/api/auth/validate', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
-        .then((res) => {
-          if (!res.ok) {
-            localStorage.removeItem('typerrToken');
-            localStorage.removeItem('typerrUser');
-            window.location.href = 'login.html';
-          } else {
-            updateUserUI();
-            // Initialize other app functions from script.js if needed
-            if (typeof initialize === 'function') initialize();
-          }
-        })
-        .catch((err) => {
-          console.error('Authentication validation error:', err);
+      .then((res) => {
+        if (!res.ok) {
+          localStorage.removeItem('typerrToken');
+          localStorage.removeItem('typerrUser');
           window.location.href = 'login.html';
-        });
+        } else {
+          updateUserUI();
+          console.log('✅ Auth validated, calling initialize()');
+          if (typeof initialize === 'function') {
+            initialize();  // ✅ now safe to call
+          } else {
+            console.error('❌ initialize is not defined');
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Authentication validation error:', err);
+        window.location.href = 'login.html';
+      });
     });
   </script>
 </body>
