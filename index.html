@@ -1,118 +1,242 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Typerr - Typing Practice for Programmers</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Typerr - Typing Practice for Programmers</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* User info styling */
+    .user-info {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: #a9a9a9;
+    }
+    .user-info button {
+      background-color: var(--primary-color, #1e88e5);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .user-info button:hover {
+      background-color: #3a7bcc;
+    }
+    /* Overlay styling */
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0,0,0,0.5);
+      color: white;
+      font-size: 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+      z-index: 10;
+    }
+    /* Button group styling */
+    .button-group button {
+      padding: 8px 16px;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-danger {
+      background-color: #e53935;
+      color: white;
+    }
+    .btn-danger:hover {
+      background-color: #b71c1c;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Typerr</h1>
-            <p class="description">Typing practice designed specifically for programmers</p>
-        </header>
-        
-        <div class="settings-panel">
-            <div class="setting-group">
-                <h3>Language</h3>
-                <select id="language-select">
-                    <option value="javascript">JavaScript</option>
-                    <option value="python">Python</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++</option>
-                    <option value="csharp">C#</option>
-                    <option value="php">PHP</option>
-                    <option value="ruby">Ruby</option>
-                    <option value="swift">Swift</option>
-                </select>
-            </div>
-            
-            <div class="setting-group">
-                <h3>Difficulty</h3>
-                <select id="difficulty-select">
-                    <option value="easy">Easy</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="hard">Hard</option>
-                    <option value="expert">Expert</option>
-                </select>
-            </div>
-            
-            <div class="setting-group">
-                <h3>Time Limit</h3>
-                <select id="time-select">
-                    <option value="0">No Limit</option>
-                    <option value="30">30 Seconds</option>
-                    <option value="60" selected>1 Minute</option>
-                    <option value="120">2 Minutes</option>
-                    <option value="300">5 Minutes</option>
-                </select>
-            </div>
-            
-            <div class="setting-group">
-                <h3>Practice Mode</h3>
-                <select id="mode-select">
-                    <option value="standard" selected>Standard</option>
-                    <option value="time-attack">Time Attack</option>
-                    <option value="error-penalty">Error Penalty</option>
-                </select>
-            </div>
-        </div>
-        
-        <div class="typing-area">
-            <div class="timer-display" id="timer">00:00</div>
-            <div class="code-display" id="code-display">Select a language and click "Start" to begin typing practice...</div>
-            <textarea class="code-input" id="code-input" placeholder="Start typing when ready..." disabled></textarea>
-            <div class="overlay" id="overlay">Ready?</div>
-            <div class="button-group">
-                <button id="start-btn">Start</button>
-                <button id="reset-btn" class="btn-danger">Reset</button>
-            </div>
-        </div>
-        
-        <div class="results" id="results">
-            <h2>Performance Results</h2>
-            <div class="result-grid">
-                <div class="result-item">
-                    <h3>WPM</h3>
-                    <div class="result-value" id="wpm-value">0</div>
-                </div>
-                <div class="result-item">
-                    <h3>Accuracy</h3>
-                    <div class="result-value" id="accuracy-value">0%</div>
-                </div>
-                <div class="result-item">
-                    <h3>Time</h3>
-                    <div class="result-value" id="time-value">0s</div>
-                </div>
-                <div class="result-item">
-                    <h3>Errors</h3>
-                    <div class="result-value" id="errors-value">0</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="history-panel">
-            <h2>Practice History</h2>
-            <table class="history-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Language</th>
-                        <th>Difficulty</th>
-                        <th>WPM</th>
-                        <th>Accuracy</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody id="history-data">
-                    History data will be inserted here
-                </tbody>
-            </table>
-        </div>
+  <div class="container">
+    <header>
+      <h1>Typerr</h1>
+      <p class="description">Typing practice designed specifically for programmers</p>
+      <div class="user-info" id="user-info">
+        <!-- User email and buttons will be dynamically inserted here -->
+      </div>
+    </header>
+
+    <div class="settings-panel">
+      <div class="setting-group">
+        <h3>Language</h3>
+        <select id="language-select">
+          <option value="javascript">JavaScript</option>
+          <option value="python">Python</option>
+          <option value="java">Java</option>
+          <option value="cpp">C++</option>
+          <option value="csharp">C#</option>
+          <option value="php">PHP</option>
+          <option value="ruby">Ruby</option>
+          <option value="swift">Swift</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <h3>Difficulty</h3>
+        <select id="difficulty-select">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+          <option value="expert">Expert</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <h3>Time Limit</h3>
+        <select id="time-select">
+          <option value="0">No Limit</option>
+          <option value="30">30 Seconds</option>
+          <option value="60" selected>1 Minute</option>
+          <option value="120">2 Minutes</option>
+          <option value="300">5 Minutes</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <h3>Practice Mode</h3>
+        <select id="mode-select">
+          <option value="standard" selected>Standard</option>
+          <option value="time-attack">Time Attack</option>
+          <option value="error-penalty">Error Penalty</option>
+        </select>
+      </div>
     </div>
 
-    <script src="snippets.js"></script>
-    <script src="script.js"></script>
+    <div class="typing-area" style="position: relative;">
+      <div class="timer-display" id="timer">00:00</div>
+      <div class="code-display" id="code-display">Select a language and click "Start" to begin typing practice...</div>
+      <textarea
+        class="code-input"
+        id="code-input"
+        placeholder="Start typing when ready..."
+        disabled
+        autocomplete="off"
+      ></textarea>
+      <div class="overlay" id="overlay">Ready?</div>
+      <div class="button-group">
+        <button id="start-btn">Start</button>
+        <button id="reset-btn" class="btn-danger">Reset</button>
+      </div>
+    </div>
+
+    <div class="results" id="results">
+      <h2>Performance Results</h2>
+      <div class="result-grid">
+        <div class="result-item">
+          <h3>WPM</h3>
+          <div class="result-value" id="wpm-value">0</div>
+        </div>
+        <div class="result-item">
+          <h3>Accuracy</h3>
+          <div class="result-value" id="accuracy-value">0%</div>
+        </div>
+        <div class="result-item">
+          <h3>Time</h3>
+          <div class="result-value" id="time-value">0s</div>
+        </div>
+        <div class="result-item">
+          <h3>Errors</h3>
+          <div class="result-value" id="errors-value">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="history-panel">
+      <h2>Practice History</h2>
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Language</th>
+            <th>Difficulty</th>
+            <th>WPM</th>
+            <th>Accuracy</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="history-data">
+          History data will be inserted here
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="snippets.js"></script>
+  <script src="script.js"></script>
+  <script>
+    // Dynamically update user info and add Setup Profile and Logout buttons
+    function updateUserUI() {
+      const userInfo = document.getElementById('user-info');
+      const userData = localStorage.getItem('typerrUser');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          userInfo.innerHTML = `
+            Logged in as: ${user.email || 'User'}
+            <button id="profile-setup-btn">Setup Profile</button>
+            <button id="logout-btn">Logout</button>
+          `;
+
+          document.getElementById('profile-setup-btn').addEventListener('click', () => {
+            window.location.href = 'profile-setup.html';
+          });
+
+          document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('typerrToken');
+            localStorage.removeItem('typerrUser');
+            window.location.href = 'login.html';
+          });
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+          userInfo.textContent = '';
+        }
+      } else {
+        userInfo.textContent = '';
+      }
+    }
+
+    // On page load, check auth and update UI accordingly
+    document.addEventListener('DOMContentLoaded', () => {
+      // Validate token with backend
+      const token = localStorage.getItem('typerrToken');
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+      fetch('https://typerr-backend.onrender.com/api/auth/validate', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => {
+          if (!res.ok) {
+            localStorage.removeItem('typerrToken');
+            localStorage.removeItem('typerrUser');
+            window.location.href = 'login.html';
+          } else {
+            updateUserUI();
+            // Initialize other app functions from script.js if needed
+            if (typeof initialize === 'function') initialize();
+          }
+        })
+        .catch((err) => {
+          console.error('Authentication validation error:', err);
+          window.location.href = 'login.html';
+        });
+    });
+  </script>
 </body>
 </html>

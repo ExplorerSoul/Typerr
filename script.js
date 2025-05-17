@@ -458,11 +458,22 @@ function endPractice() {
         return;
     }
     // Send result to backend
+    // fetch('https://typerr-backend.onrender.com/api/sessions', {
+    //     method: 'POST',
+    //     headers: headers,
+    //     body: JSON.stringify(result),
+    // })
+    // const token = localStorage.getItem('typerrToken');
+
     fetch('https://typerr-backend.onrender.com/api/sessions', {
         method: 'POST',
-        headers: headers,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`  // ✅ Send the user's token
+        },
         body: JSON.stringify(result),
     })
+
     .then(res => {
         if (res.status === 401) {
             // Redirect to login page if unauthorized
@@ -511,33 +522,19 @@ function resetPractice() {
 // Display typing history
 function displayHistory() {
     historyData.innerHTML = '';
-    
-    // Get auth token from localStorage
+
     const token = localStorage.getItem('typerrToken');
-    
-    // Prepare headers with authorization token
-    const headers = {
-        'Content-Type': 'application/json'
-    };
-    
-    // Add authorization header if token exists
+    const headers = {};
+
+    // ✅ Add Authorization header if token exists
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
     fetch('https://typerr-backend.onrender.com/api/sessions', {
-        method: 'GET',
         headers: headers
     })
-    .then(res => {
-        // Handle unauthorized response
-        if (res.status === 401) {
-            // Redirect to login page if unauthorized
-            window.location.href = 'login.html';
-            throw new Error('Unauthorized - Please log in');
-        }
-        return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
         if (!data.length) {
             const emptyRow = document.createElement('tr');
@@ -586,19 +583,9 @@ function displayHistory() {
     })
     .catch(err => {
         console.error('❌ Failed to load history:', err);
-        
-        // Show error message in history area if not redirecting
-        if (!err.message.includes('Unauthorized')) {
-            const errorRow = document.createElement('tr');
-            const errorCell = document.createElement('td');
-            errorCell.colSpan = 6;
-            errorCell.textContent = 'Failed to load history. Please try again later.';
-            errorCell.classList.add('empty-history');
-            errorRow.appendChild(errorCell);
-            historyData.appendChild(errorRow);
-        }
     });
 }
+
 
 
 // Get code snippet based on language and difficulty

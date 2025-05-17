@@ -128,6 +128,47 @@ verificationForm.addEventListener('submit', function(e) {
     }
 });
 
+// Password login support
+const passwordLoginForm = document.getElementById('login-form');
+
+if (passwordLoginForm) {
+    passwordLoginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        if (!email || !password) {
+            showMessage('Please enter email and password.', 'error');
+            return;
+        }
+
+        fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.token) {
+                localStorage.setItem('typerrToken', data.token);
+                localStorage.setItem('typerrUser', JSON.stringify(data.user));
+
+                if (data.user.profileComplete) {
+                    window.location.href = 'index.html';
+                } else {
+                    window.location.href = 'profile-setup.html';
+                }
+            } else {
+                showMessage(data.message || 'Invalid email or password.', 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Login error:', err);
+            showMessage('An error occurred. Please try again.', 'error');
+        });
+    });
+}
+
 resendCodeBtn.addEventListener('click', function(e) {
     e.preventDefault();
     if (currentEmail) {

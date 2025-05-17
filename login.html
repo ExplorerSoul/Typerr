@@ -40,7 +40,7 @@
             color: #d4d4d4;
         }
         
-        .verification-container {
+        .verification-container, .login-password-container {
             display: none;
         }
         
@@ -55,8 +55,24 @@
             font-weight: bold;
         }
         
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            text-align: center;
+        }
+        
         .btn-primary:hover {
             background-color: #3a7bcc;
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(58, 123, 204, 0.1);
         }
         
         .message {
@@ -124,6 +140,11 @@
             background-color: #444;
             z-index: 0;
         }
+        
+        .toggle-container {
+            margin-top: 20px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -151,6 +172,7 @@
             
             <div id="message-container"></div>
             
+            <!-- Email Code Authentication -->
             <div id="email-container">
                 <form id="email-form" class="login-form">
                     <div class="form-group">
@@ -175,10 +197,31 @@
                 </form>
             </div>
             
+            <!-- Password Authentication -->
+            <div id="login-container" class="login-password-container">
+                <form id="login-form" class="login-form">
+                    <div class="form-group">
+                        <label for="login-email">Email Address</label>
+                        <input type="email" id="login-email" name="email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" name="password" placeholder="Enter your password" required minlength="6">
+                    </div>
+                    <button class="btn-primary" type="submit">Login</button>
+                </form>
+            </div>
+            
+            <!-- Success Message -->
             <div id="success-container" style="display: none; text-align: center;">
                 <h2 style="color: var(--secondary-color); margin-bottom: 20px;">Login Successful!</h2>
                 <p>You're now logged in to Typerr.</p>
                 <a href="index.html" class="btn-primary" style="display: inline-block; margin-top: 20px; text-decoration: none;">Start Practicing</a>
+            </div>
+            
+            <!-- Toggle between login methods -->
+            <div class="toggle-container">
+                <button id="login-toggle" class="btn-secondary">Login with Password</button>
             </div>
         </div>
     </div>
