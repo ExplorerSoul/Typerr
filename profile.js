@@ -129,6 +129,8 @@ function saveProfile(profileData) {
         return;
     }
 
+    console.log('📤 Sending profile data:', profileData);
+
     fetch(`${API_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
@@ -137,47 +139,58 @@ function saveProfile(profileData) {
         },
         body: JSON.stringify(profileData)
     })
-    .then(response => {
-        if (response.status === 401) {
+    .then(async response => {
+        const text = await response.text(); // Get raw response
+        console.log('📥 Raw response:', text);
+
+        // Try to parse JSON
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (err) {
+            throw new Error('Invalid JSON response');
+        }
+
+        if (response.status === 401 || data.message === 'Unauthorized') {
             throw new Error('Unauthorized');
         }
-        return response.json();
-    })
-    .then(data => {
+
         if (data.error) {
             showMessage(data.error, 'error');
-        } else {
-            // Update local storage with new user data and token
-            if (data.user) {
-                localStorage.setItem('typerrUser', JSON.stringify(data.user));
-            }
-
-            if (data.token) {
-                localStorage.setItem('typerrToken', data.token);
-            }
-
-            // Show success message and redirect
-            profileSetupContainer.style.display = 'none';
-            successContainer.style.display = 'block';
-            step2.classList.remove('active');
-            step3.classList.add('active');
-
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 3000);
+            return;
         }
+
+        // ✅ Save updated user/token if present
+        if (data.user) {
+            localStorage.setItem('typerrUser', JSON.stringify(data.user));
+        }
+
+        if (data.token) {
+            localStorage.setItem('typerrToken', data.token);
+        }
+
+        // ✅ Show success and redirect
+        profileSetupContainer.style.display = 'none';
+        successContainer.style.display = 'block';
+        step2.classList.remove('active');
+        step3.classList.add('active');
+
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 3000);
     })
     .catch(err => {
+        console.error('❌ saveProfile error:', err);
         if (err.message === 'Unauthorized') {
             showMessage('Your session has expired. Please login again.', 'error');
             localStorage.removeItem('typerrToken');
             window.location.href = 'login.html';
         } else {
             showMessage('An error occurred while saving your profile. Please try again.', 'error');
-            console.error(err);
         }
     });
 }
+
 
 
 // Initialize avatar selection
