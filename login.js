@@ -128,6 +128,24 @@ verificationForm.addEventListener('submit', function(e) {
     }
 });
 
+// Handle login method toggle
+const loginToggleBtn = document.getElementById('login-toggle');
+const loginPasswordContainer = document.getElementById('login-container');
+
+if (loginToggleBtn) {
+    loginToggleBtn.addEventListener('click', function () {
+        emailContainer.style.display = 'none';
+        verificationContainer.style.display = 'none';
+        successContainer.style.display = 'none';
+        loginPasswordContainer.style.display = 'block';
+
+        step1.classList.remove('active');
+        step2.classList.remove('active');
+        step3.classList.remove('active');
+    });
+}
+
+
 // Password login support
 const passwordLoginForm = document.getElementById('login-form');
 

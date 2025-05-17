@@ -173,44 +173,12 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <!-- These must go at the end of index.html, just before </body> -->
   <script src="snippets.js"></script>
-  
+  <script src="main.js"></script> <!-- ✅ This loads your script.js -->
 
-  <!-- ✅ Inline script runs AFTER external scripts are fully loaded -->
   <script>
-    // Dynamically update user info and add Setup Profile and Logout buttons
-    function updateUserUI() {
-      const userInfo = document.getElementById('user-info');
-      const userData = localStorage.getItem('typerrUser');
-      if (userData) {
-        try {
-          const user = JSON.parse(userData);
-          userInfo.innerHTML = `
-            Logged in as: ${user.email || 'User'}
-            <button id="profile-setup-btn">Setup Profile</button>
-            <button id="logout-btn">Logout</button>
-          `;
-
-          document.getElementById('profile-setup-btn').addEventListener('click', () => {
-            window.location.href = 'profile-setup.html';
-          });
-
-          document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem('typerrToken');
-            localStorage.removeItem('typerrUser');
-            window.location.href = 'login.html';
-          });
-        } catch (e) {
-          console.error('Error parsing user data:', e);
-          userInfo.textContent = '';
-        }
-      } else {
-        userInfo.textContent = '';
-      }
-    }
-
-    // ✅ Wait for DOM AND script.js to load
+    // Safe inline fallback that only runs after both scripts above
     window.addEventListener('load', () => {
       const token = localStorage.getItem('typerrToken');
       if (!token) {
@@ -224,26 +192,22 @@
           Authorization: `Bearer ${token}`,
         },
       })
-      .then((res) => {
+      .then(res => {
         if (!res.ok) {
           localStorage.removeItem('typerrToken');
           localStorage.removeItem('typerrUser');
           window.location.href = 'login.html';
         } else {
-          updateUserUI();
-          console.log('✅ Auth validated, calling initialize()');
+          console.log('✅ Auth validated');
           if (typeof initialize === 'function') {
-            initialize();  // ✅ now safe to call
+            initialize(); // ✅ Will be defined now
           } else {
-            console.error('❌ initialize is not defined');
+            console.error('❌ initialize is still undefined');
           }
         }
-      })
-      .catch((err) => {
-        console.error('Authentication validation error:', err);
-        window.location.href = 'login.html';
       });
     });
   </script>
+
 </body>
 </html>
