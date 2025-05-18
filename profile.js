@@ -3,10 +3,6 @@ const profileForm = document.getElementById('profile-form');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const confirmPasswordInput = document.getElementById('confirm-password');
-const avatarPreview = document.getElementById('avatar-preview');
-const avatarOptions = document.querySelectorAll('.avatar-option');
-const preferenceOptions = document.querySelectorAll('.preference-option');
-const programmingFocusInput = document.getElementById('programming-focus');
 const messageContainer = document.getElementById('message-container');
 const profileSetupContainer = document.getElementById('profile-setup-container');
 const successContainer = document.getElementById('success-container');
@@ -25,9 +21,6 @@ const step3 = document.getElementById('step-3');
 // API URL - replace with your actual backend URL
 const API_URL = 'https://typerr-backend.onrender.com/api';
 // const API_URL = 'http://localhost:5000/api';  // for local development
-
-// Store selected avatar color
-let selectedAvatarColor = '#1E88E5'; // Default blue
 
 // Check if user is authenticated
 function checkAuthStatus() {
@@ -77,11 +70,6 @@ function prefillUserData() {
     if (userData) {
         try {
             const user = JSON.parse(userData);
-            
-            // Set the avatar preview initial to first letter of email
-            if (user.email) {
-                avatarPreview.textContent = user.email.charAt(0).toUpperCase();
-            }
             
             // If username exists, pre-fill it
             if (user.username) {
@@ -191,47 +179,6 @@ function saveProfile(profileData) {
     });
 }
 
-
-
-// Initialize avatar selection
-function initAvatarSelection() {
-    // Mark first avatar as selected by default
-    avatarOptions[0].classList.add('selected');
-    
-    avatarOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            // Remove selected class from all options
-            avatarOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Add selected class to clicked option
-            this.classList.add('selected');
-            
-            // Update selected color
-            selectedAvatarColor = this.dataset.color;
-            
-            // Update avatar preview background
-            avatarPreview.style.backgroundColor = selectedAvatarColor;
-        });
-    });
-}
-
-// Initialize preference selection
-function initPreferenceSelection() {
-    preferenceOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            // Remove selected class from all options
-            preferenceOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Add selected class to clicked option
-            this.classList.add('selected');
-            
-            // Update hidden input value
-            programmingFocusInput.value = this.dataset.value;
-        });
-    });
-}
-
-// Event listeners
 // Event listeners
 profileForm.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -239,7 +186,6 @@ profileForm.addEventListener('submit', function(e) {
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
     const confirmPassword = confirmPasswordInput.value;
-    const programmingFocus = programmingFocusInput.value;
     
     // Validate username
     if (username.length < 3) {
@@ -259,12 +205,6 @@ profileForm.addEventListener('submit', function(e) {
         return;
     }
     
-    // Validate programming focus
-    if (!programmingFocus) {
-        showMessage('Please select your programming focus', 'error');
-        return;
-    }
-    
     // Show loading state
     const saveButton = document.getElementById('save-profile-btn');
     const originalButtonText = saveButton.textContent;
@@ -274,9 +214,7 @@ profileForm.addEventListener('submit', function(e) {
     // Prepare profile data
     const profileData = {
         username,
-        password,
-        avatarColor: selectedAvatarColor,
-        programmingFocus
+        password
     };
     
     // Save profile
@@ -296,11 +234,6 @@ passwordInput.addEventListener('input', validatePassword);
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthStatus();
-    initAvatarSelection();
-    initPreferenceSelection();
-    
-    // Set default avatar preview background
-    avatarPreview.style.backgroundColor = selectedAvatarColor;
     
     // Mark first step as complete
     step1.classList.add('complete');
