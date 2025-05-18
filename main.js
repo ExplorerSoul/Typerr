@@ -143,24 +143,43 @@ function checkAuthStatus() {
     return true;
 }
 
-// Update UI based on user login status
+// Update this function in main.js
 function updateUserUI() {
     // Get user data if available
     const userData = localStorage.getItem('typerrUser');
+    
+    // Clear any existing user info to prevent duplicates
+    const existingUserInfo = document.getElementById('user-info');
+    if (existingUserInfo) {
+        existingUserInfo.innerHTML = '';
+    }
+    
     if (userData) {
         try {
             const user = JSON.parse(userData);
             
-            // Create a user info section in the header
-            const header = document.querySelector('header');
-            const userInfo = document.createElement('div');
-            userInfo.className = 'user-info';
-            userInfo.innerHTML = `
+            // Check if user has completed profile setup
+            const hasCompletedSetup = user.hasCompletedSetup || false;
+            
+            // Create user info content
+            const userInfoContent = `
                 <span>Logged in as: ${user.email || 'User'}</span>
+                ${!hasCompletedSetup ? 
+                    '<button id="profile-setup-btn" class="btn-small">Complete Profile</button>' : 
+                    ''}
                 <button id="logout-btn" class="btn-small">Logout</button>
             `;
             
-            header.appendChild(userInfo);
+            // Use the existing user-info div or create one if it doesn't exist
+            if (existingUserInfo) {
+                existingUserInfo.innerHTML = userInfoContent;
+            } else {
+                const userInfo = document.createElement('div');
+                userInfo.id = 'user-info';
+                userInfo.className = 'user-info';
+                userInfo.innerHTML = userInfoContent;
+                document.querySelector('header').appendChild(userInfo);
+            }
             
             // Add logout functionality
             document.getElementById('logout-btn').addEventListener('click', function() {
@@ -168,6 +187,14 @@ function updateUserUI() {
                 localStorage.removeItem('typerrUser');
                 window.location.href = 'login.html';
             });
+            
+            // Add profile setup functionality if button exists
+            const profileSetupBtn = document.getElementById('profile-setup-btn');
+            if (profileSetupBtn) {
+                profileSetupBtn.addEventListener('click', function() {
+                    window.location.href = 'profile-setup.html';
+                });
+            }
             
         } catch (e) {
             console.error('Error parsing user data:', e);
@@ -230,7 +257,7 @@ function startPractice() {
     correctKeystrokes = 0;
     errorCount = 0;
     
-    // Hide overlay
+    // Hide overlay immediately when starting practice
     overlay.style.display = 'none';
     
     // Reset results
