@@ -120,7 +120,7 @@ function saveProfile(profileData) {
     console.log('📤 Sending profile data:', profileData);
 
     fetch(`${API_URL}/users/profile`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
