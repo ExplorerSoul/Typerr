@@ -650,7 +650,4 @@ function getCodeSnippet(language, difficulty) {
 }
 
 // Initialize the application when DOM is fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("initialize is called");
-  initialize();  // ✅ force run initialization from script.js directly
-});
+document.addEventListener('DOMContentLoaded', initialize);
