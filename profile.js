@@ -119,7 +119,7 @@ function saveProfile(profileData) {
 
     console.log('📤 Sending profile data:', profileData);
 
-    fetch(`${API_URL}/auth/profile`, {
+    fetch(`${API_URL}/users/profile`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',

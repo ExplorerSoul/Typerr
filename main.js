@@ -159,7 +159,7 @@ function updateUserUI() {
             const user = JSON.parse(userData);
             
             // Check if user has completed profile setup
-            const hasCompletedSetup = user.hasCompletedSetup || false;
+            const hasCompletedSetup = user.profileComplete || user.hasCompletedSetup || false;
             
             // Create user info content
             const userInfoContent = `
