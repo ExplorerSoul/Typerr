@@ -47,6 +47,11 @@ function initialize() {
     
     // Bind events
     bindEvents();
+
+    // Hide overlay for authenticated users
+    setTimeout(() => {
+        document.getElementById('overlay').style.display = 'none';
+    }, 500);
     
     // Add some CSS for the user info in header
     const style = document.createElement('style');
@@ -144,6 +149,7 @@ function checkAuthStatus() {
 }
 
 // Update this function in main.js
+// Update the updateUserUI function in main.js
 function updateUserUI() {
     // Get user data if available
     const userData = localStorage.getItem('typerrUser');
@@ -161,12 +167,15 @@ function updateUserUI() {
             // Check if user has completed profile setup
             const hasCompletedSetup = user.profileComplete || user.hasCompletedSetup || false;
             
-            // Create user info content
+            // Always show profile button, but change text based on setup status
+            const profileButtonText = hasCompletedSetup ? 'Edit Profile' : 'Complete Profile';
+            
+            // Create user info content - always include profile button
+            // Enhanced version with more user info
             const userInfoContent = `
                 <span>Logged in as: ${user.email || 'User'}</span>
-                ${!hasCompletedSetup ? 
-                    '<button id="profile-setup-btn" class="btn-small">Complete Profile</button>' : 
-                    ''}
+                ${user.name ? `<span class="user-name">(${user.name})</span>` : ''}
+                <button id="profile-setup-btn" class="btn-small ${hasCompletedSetup ? 'btn-edit' : 'btn-complete'}">${profileButtonText}</button>
                 <button id="logout-btn" class="btn-small">Logout</button>
             `;
             
@@ -188,7 +197,7 @@ function updateUserUI() {
                 window.location.href = 'login.html';
             });
             
-            // Add profile setup functionality if button exists
+            // Add profile setup/edit functionality - always present now
             const profileSetupBtn = document.getElementById('profile-setup-btn');
             if (profileSetupBtn) {
                 profileSetupBtn.addEventListener('click', function() {
@@ -201,6 +210,34 @@ function updateUserUI() {
         }
     }
 }
+
+// Optional: Add a function to refresh user UI after profile updates
+function refreshUserUI() {
+    // This can be called when returning from profile setup page
+    // or when user data is updated
+    updateUserUI();
+}
+
+// Optional: Add this to handle profile updates
+// Call this function when user returns from profile-setup.html
+function handleProfileUpdate() {
+    // Refresh user data from localStorage
+    const userData = localStorage.getItem('typerrUser');
+    if (userData) {
+        updateUserUI();
+        console.log('✅ Profile UI refreshed');
+    }
+}
+
+// You can also add this to detect when user returns to the page
+// and refresh the UI accordingly
+window.addEventListener('focus', function() {
+    // Refresh UI when user returns to the page (e.g., from profile setup)
+    const token = localStorage.getItem('typerrToken');
+    if (token) {
+        updateUserUI();
+    }
+});
 
 // Bind event listeners
 function bindEvents() {
@@ -541,9 +578,9 @@ function resetPractice() {
     
     codeDisplay.innerHTML = 'Select a language and click "Start" to begin practice...';
     
+    overlay.textContent = 'Ready?';
     // Hide the overlay so Start button is clickable
     overlay.style.display = 'none';  // <-- Change this from 'flex' to 'none'
-    overlay.textContent = 'Ready?';
 }
 
 
@@ -651,3 +688,134 @@ function getCodeSnippet(language, difficulty) {
 
 // Initialize the application when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initialize);
+
+
+
+// // In your main.js, update these functions:
+
+// // 1. Update the checkAuthStatus function
+// function checkAuthStatus() {
+//     const token = localStorage.getItem('typerrToken');
+    
+//     // If no token, redirect to login page
+//     if (!token) {
+//         window.location.href = 'login.html';
+//         return false;
+//     }
+
+//     // Validate token with backend
+//     fetch('https://typerr-backend.onrender.com/api/auth/validate', {
+//         method: 'GET',
+//         headers: {
+//             'Authorization': `Bearer ${token}`
+//         }
+//     })
+//     .then(res => {
+//         if (!res.ok) {
+//             // Token is invalid, redirect to login
+//             console.log('❌ Authentication token invalid');
+//             localStorage.removeItem('typerrToken');
+//             localStorage.removeItem('typerrUser');
+//             window.location.href = 'login.html';
+//         } else {
+//             console.log('✅ Authentication valid');
+//             // Update UI and hide overlay after successful auth
+//             updateUserUI();
+//             // Hide the overlay and enable the interface
+//             hideOverlayAfterAuth();
+//         }
+//     })
+//     .catch(err => {
+//         console.error('❌ Error validating authentication:', err);
+//         // Continue with app but don't update UI
+//     });
+    
+//     return true;
+// }
+
+// // 2. Add this new function to hide overlay after authentication
+// function hideOverlayAfterAuth() {
+//     const overlay = document.getElementById('overlay');
+//     const startButton = document.getElementById('start-btn');
+    
+//     if (overlay && startButton) {
+//         // Hide the overlay
+//         overlay.style.display = 'none';
+        
+//         // Enable the start button
+//         startButton.disabled = false;
+        
+//         // Update the code display with instructions
+//         const codeDisplay = document.getElementById('code-display');
+//         if (codeDisplay) {
+//             codeDisplay.innerHTML = 'Select a language and click "Start" to begin typing practice...';
+//         }
+        
+//         console.log('✅ Interface ready for authenticated user');
+//     }
+// }
+
+// // 3. Update the resetPractice function to show overlay correctly
+// function resetPractice() {
+//     clearInterval(timer);
+//     isRunning = false;
+//     startButton.disabled = false;  // Enable Start button
+//     resetButton.disabled = false;  // Enable Reset button
+//     codeInput.disabled = true;
+//     codeInput.value = '';
+    
+//     timerDisplay.textContent = '00:00';
+//     timerDisplay.classList.remove('timer-warning');
+    
+//     wpmValue.textContent = '0';
+//     accuracyValue.textContent = '0%';
+//     timeValue.textContent = '0s';
+//     errorsValue.textContent = '0';
+    
+//     codeDisplay.innerHTML = 'Select a language and click "Start" to begin practice...';
+    
+//     // Don't show overlay after reset - user is already authenticated
+//     overlay.style.display = 'none';
+// }
+
+// // 4. Update the inline script in index.html
+// // Replace the existing inline script with this:
+// window.addEventListener('load', () => {
+//     const token = localStorage.getItem('typerrToken');
+//     if (!token) {
+//         window.location.href = 'login.html';
+//         return;
+//     }
+
+//     fetch('https://typerr-backend.onrender.com/api/auth/validate', {
+//         method: 'GET',
+//         headers: {
+//             Authorization: `Bearer ${token}`,
+//         },
+//     })
+//     .then(res => {
+//         if (!res.ok) {
+//             localStorage.removeItem('typerrToken');
+//             localStorage.removeItem('typerrUser');
+//             window.location.href = 'login.html';
+//         } else {
+//             console.log('✅ Auth validated');
+//             if (typeof initialize === 'function') {
+//                 initialize();
+//                 // Hide overlay after successful initialization
+//                 setTimeout(() => {
+//                     const overlay = document.getElementById('overlay');
+//                     if (overlay) {
+//                         overlay.style.display = 'none';
+//                     }
+//                 }, 100); // Small delay to ensure DOM is ready
+//             } else {
+//                 console.error('❌ initialize is still undefined');
+//             }
+//         }
+//     })
+//     .catch(err => {
+//         console.error('❌ Auth validation error:', err);
+//         // On network error, still try to initialize but keep overlay
+//     });
+// });

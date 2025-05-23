@@ -254,6 +254,17 @@ button:hover {
     animation: shake 0.5s;
 }
 
+.user-name {
+    font-weight: bold;
+    color: #4CAF50;
+}
+.btn-complete {
+    background-color: #ff9800;
+}
+.btn-edit {
+    background-color: #2196F3;
+}
+
 @keyframes shake {
     0% { transform: translateX(0); }
     25% { transform: translateX(-5px); }
