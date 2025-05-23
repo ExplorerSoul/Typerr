@@ -1,4 +1,3 @@
-console.log("script.js is called");
 // DOM Elements
 const codeDisplay = document.getElementById('code-display');
 const codeInput = document.getElementById('code-input');
@@ -496,7 +495,7 @@ function endPractice() {
 
     // Prepare result data
     const result = {
-        date: new Date().toLocaleDateString(),
+        date: new Date().toISOString(), // ✅ Use ISO format
         language: currentLanguage,
         difficulty: difficultySelect.value,
         wpm,
@@ -504,6 +503,7 @@ function endPractice() {
         time: Math.round(practiceTime),
         mode: practiceMode
     };
+
 
     // Get auth token from localStorage
     const token = localStorage.getItem('typerrToken');
@@ -584,24 +584,16 @@ function resetPractice() {
 }
 
 
-// Display typing history
 function displayHistory() {
     historyData.innerHTML = '';
 
     const token = localStorage.getItem('typerrToken');
-    const headers = {};
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-    // ✅ Add Authorization header if token exists
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    fetch('https://typerr-backend.onrender.com/api/sessions', {
-        headers: headers
-    })
+    fetch('https://typerr-backend.onrender.com/api/sessions', { headers })
     .then(res => res.json())
     .then(data => {
-        if (!data.length) {
+        if (!Array.isArray(data) || data.length === 0) {
             const emptyRow = document.createElement('tr');
             const emptyCell = document.createElement('td');
             emptyCell.colSpan = 6;
@@ -612,36 +604,48 @@ function displayHistory() {
             return;
         }
 
+        // Re-clear in case multiple calls happen
+        historyData.innerHTML = '';
+
         data.forEach((record, index) => {
+            if (!record || typeof record !== 'object') return;
+
             const row = document.createElement('tr');
 
             const dateCell = document.createElement('td');
-            dateCell.textContent = record.date;
+            let formattedDate = '—';
+            try {
+                const parsedDate = new Date(record.createdAt);
+                formattedDate = !isNaN(parsedDate.getTime())
+                    ? parsedDate.toLocaleDateString() // or .toLocaleString()
+                    : '—';
+            } catch (e) {
+                console.error('🛑 Error parsing date:', record.date, e);
+            }
+            dateCell.textContent = formattedDate;
             row.appendChild(dateCell);
 
             const langCell = document.createElement('td');
-            langCell.textContent = record.language;
+            langCell.textContent = record.language || '—';
             row.appendChild(langCell);
 
             const diffCell = document.createElement('td');
-            diffCell.textContent = record.difficulty;
+            diffCell.textContent = record.difficulty || '—';
             row.appendChild(diffCell);
 
             const wpmCell = document.createElement('td');
-            wpmCell.textContent = record.wpm;
+            wpmCell.textContent = record.wpm || '0';
             row.appendChild(wpmCell);
 
             const accCell = document.createElement('td');
-            accCell.textContent = `${record.accuracy}%`;
+            accCell.textContent = `${record.accuracy || 0}%`;
             row.appendChild(accCell);
 
             const timeCell = document.createElement('td');
-            timeCell.textContent = `${record.time}s`;
+            timeCell.textContent = `${record.time || 0}s`;
             row.appendChild(timeCell);
 
-            if (index === 0) {
-                row.classList.add('latest-result');
-            }
+            if (index === 0) row.classList.add('latest-result');
 
             historyData.appendChild(row);
         });
@@ -650,7 +654,6 @@ function displayHistory() {
         console.error('❌ Failed to load history:', err);
     });
 }
-
 
 
 // Get code snippet based on language and difficulty
