@@ -22,6 +22,9 @@ const step3 = document.getElementById('step-3');
 const API_URL = 'https://typerr-backend.onrender.com/api';
 // const API_URL = 'http://localhost:5000/api';  // for local development
 
+// Track if this is an edit session
+let isEditMode = false;
+
 // Check if user is authenticated
 function checkAuthStatus() {
     const token = localStorage.getItem('typerrToken');
@@ -51,8 +54,10 @@ function checkAuthStatus() {
     })
     .then(data => {
         if (data && data.profileComplete) {
-            // If profile is already set up, redirect to home page
-            window.location.href = 'index.html';
+            // Profile is complete - this is edit mode
+            isEditMode = true;
+            updateUIForEditMode();
+            prefillUserData();
         } else {
             // If user exists but profile is not complete, pre-fill email
             prefillUserData();
@@ -62,6 +67,44 @@ function checkAuthStatus() {
         console.error('Error validating authentication:', err);
         showMessage('Authentication error. Please login again.', 'error');
     });
+}
+
+// Update UI for edit mode
+function updateUIForEditMode() {
+    // Update title and description
+    document.querySelector('.profile-title h1').textContent = 'Edit Profile';
+    document.querySelector('.profile-title .description').textContent = 'Update your profile information';
+    
+    // Update step indicators
+    step1.classList.add('complete');
+    step2.classList.add('active');
+    step3.classList.remove('active');
+    
+    // Update button text
+    document.getElementById('save-profile-btn').textContent = 'Update Profile';
+    
+    // Make password fields optional for editing
+    passwordInput.required = false;
+    confirmPasswordInput.required = false;
+    
+    // Add note about password
+    const passwordRequirements = document.querySelector('.password-requirements');
+    passwordRequirements.innerHTML = `
+        <strong>Leave password fields empty to keep your current password</strong><br>
+        Or enter a new password that meets these requirements:
+        <ul>
+            <li id="req-length">At least 8 characters</li>
+            <li id="req-uppercase">At least one uppercase letter</li>
+            <li id="req-lowercase">At least one lowercase letter</li>
+            <li id="req-number">At least one number</li>
+        </ul>
+    `;
+    
+    // Re-attach requirement elements after updating HTML
+    reqLength = document.getElementById('req-length');
+    reqUppercase = document.getElementById('req-uppercase');
+    reqLowercase = document.getElementById('req-lowercase');
+    reqNumber = document.getElementById('req-number');
 }
 
 // Pre-fill user data if available
@@ -91,6 +134,16 @@ function showMessage(message, type) {
 function validatePassword() {
     const password = passwordInput.value;
     
+    // If in edit mode and password is empty, it's valid (keeping current password)
+    if (isEditMode && password === '') {
+        // Clear all requirement indicators
+        if (reqLength) reqLength.className = '';
+        if (reqUppercase) reqUppercase.className = '';
+        if (reqLowercase) reqLowercase.className = '';
+        if (reqNumber) reqNumber.className = '';
+        return true;
+    }
+    
     // Check each requirement
     const hasLength = password.length >= 8;
     const hasUppercase = /[A-Z]/.test(password);
@@ -98,10 +151,10 @@ function validatePassword() {
     const hasNumber = /[0-9]/.test(password);
     
     // Update UI for each requirement
-    reqLength.className = hasLength ? 'met' : '';
-    reqUppercase.className = hasUppercase ? 'met' : '';
-    reqLowercase.className = hasLowercase ? 'met' : '';
-    reqNumber.className = hasNumber ? 'met' : '';
+    if (reqLength) reqLength.className = hasLength ? 'met' : '';
+    if (reqUppercase) reqUppercase.className = hasUppercase ? 'met' : '';
+    if (reqLowercase) reqLowercase.className = hasLowercase ? 'met' : '';
+    if (reqNumber) reqNumber.className = hasNumber ? 'met' : '';
     
     // Return overall validity
     return hasLength && hasUppercase && hasLowercase && hasNumber;
@@ -160,6 +213,16 @@ function saveProfile(profileData) {
         // ✅ Show success and redirect
         profileSetupContainer.style.display = 'none';
         successContainer.style.display = 'block';
+        
+        // Update success message for edit mode
+        if (isEditMode) {
+            successContainer.innerHTML = `
+                <h2 style="color: var(--secondary-color); margin-bottom: 20px;">Profile Updated!</h2>
+                <p>Your profile has been updated successfully.</p>
+                <p>Redirecting back to the home page...</p>
+            `;
+        }
+        
         step2.classList.remove('active');
         step3.classList.add('active');
 
@@ -193,36 +256,46 @@ profileForm.addEventListener('submit', function(e) {
         return;
     }
     
-    // Validate password
-    if (!validatePassword()) {
-        showMessage('Please ensure your password meets all requirements', 'error');
-        return;
+    // Validate password (only if provided in edit mode, or always in new profile mode)
+    if (!isEditMode || password !== '') {
+        if (!validatePassword()) {
+            showMessage('Please ensure your password meets all requirements', 'error');
+            return;
+        }
+        
+        // Check if passwords match
+        if (password !== confirmPassword) {
+            showMessage('Passwords do not match', 'error');
+            return;
+        }
     }
     
-    // Check if passwords match
-    if (password !== confirmPassword) {
-        showMessage('Passwords do not match', 'error');
-        return;
+    // In edit mode, if password is empty, don't send it
+    if (isEditMode && password === '' && confirmPassword === '') {
+        // Only send username for update
+        var profileData = {
+            username
+        };
+    } else {
+        // Send both username and password
+        var profileData = {
+            username,
+            password
+        };
     }
     
     // Show loading state
     const saveButton = document.getElementById('save-profile-btn');
     const originalButtonText = saveButton.textContent;
     saveButton.disabled = true;
-    saveButton.textContent = 'Saving...';
-    
-    // Prepare profile data
-    const profileData = {
-        username,
-        password
-    };
+    saveButton.textContent = isEditMode ? 'Updating...' : 'Saving...';
     
     // Save profile
     saveProfile(profileData);
 
     // Reset button state after 10 seconds if not already changed by the saveProfile function
     setTimeout(() => {
-        if (saveButton.textContent === 'Saving...') {
+        if (saveButton.textContent === (isEditMode ? 'Updating...' : 'Saving...')) {
             saveButton.disabled = false;
             saveButton.textContent = originalButtonText;
         }
