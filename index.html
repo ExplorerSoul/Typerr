@@ -12,22 +12,64 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 10px;
+      gap: 15px;
       font-size: 0.9rem;
       color: #a9a9a9;
+      flex-wrap: wrap;
     }
+    
+    .user-welcome {
+      color: #d4d4d4;
+      font-weight: 500;
+    }
+    
+    .user-username {
+      color: var(--primary-color, #1e88e5);
+      font-weight: bold;
+    }
+    
+    .user-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
     .user-info button {
-      background-color: var(--primary-color, #1e88e5);
-      color: white;
-      border: none;
-      padding: 5px 10px;
+      background-color: transparent;
+      color: #a9a9a9;
+      border: 1px solid #555;
+      padding: 4px 8px;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
+      transition: all 0.2s ease;
     }
+    
     .user-info button:hover {
-      background-color: #3a7bcc;
+      background-color: #333;
+      color: #fff;
+      border-color: #777;
     }
+    
+    .user-info .btn-edit {
+      color: var(--primary-color, #1e88e5);
+      border-color: var(--primary-color, #1e88e5);
+    }
+    
+    .user-info .btn-edit:hover {
+      background-color: var(--primary-color, #1e88e5);
+      color: white;
+    }
+    
+    .user-info .btn-logout {
+      color: #e53935;
+      border-color: #e53935;
+    }
+    
+    .user-info .btn-logout:hover {
+      background-color: #e53935;
+      color: white;
+    }
+    
     /* Overlay styling */
     .overlay {
       position: absolute;
@@ -64,7 +106,7 @@
       <h1>Typerr</h1>
       <p class="description">Typing practice designed specifically for programmers</p>
       <div class="user-info" id="user-info">
-        <!-- User email and buttons will be dynamically inserted here -->
+        <!-- User info will be dynamically inserted here -->
       </div>
     </header>
 
@@ -175,11 +217,43 @@
 
   <!-- These must go at the end of index.html, just before </body> -->
   <script src="snippets.js"></script>
-  <script src="main.js"></script> <!-- ✅ This loads your script.js -->
+  <script src="main.js"></script>
 
   <script>
-    // Safe inline fallback that only runs after both scripts above
-    window.addEventListener('load', () => {
+    // User info management
+    function updateUserInfo(userData) {
+      const userInfoElement = document.getElementById('user-info');
+      if (!userInfoElement || !userData) return;
+      
+      const username = userData.username || 'User';
+      const email = userData.email || '';
+      
+      userInfoElement.innerHTML = `
+        <div class="user-welcome">
+          Welcome, <span class="user-username">${username}</span>
+          ${email ? `<span class="user-email">(${email})</span>` : ''}
+        </div>
+        <div class="user-actions">
+          <button class="btn-edit" onclick="editProfile()">Edit Profile</button>
+          <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+      `;
+    }
+    
+    function editProfile() {
+      window.location.href = 'profile-setup.html';
+    }
+    
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('typerrToken');
+        localStorage.removeItem('typerrUser');
+        window.location.href = 'login.html';
+      }
+    }
+    
+    // Enhanced authentication check
+    function checkAuthAndLoadUser() {
       const token = localStorage.getItem('typerrToken');
       if (!token) {
         window.location.href = 'login.html';
@@ -189,23 +263,44 @@
       fetch('https://typerr-backend.onrender.com/api/auth/validate', {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
       })
       .then(res => {
         if (!res.ok) {
-          localStorage.removeItem('typerrToken');
-          localStorage.removeItem('typerrUser');
-          window.location.href = 'login.html';
-        } else {
-          console.log('✅ Auth validated');
-          if (typeof initialize === 'function') {
-            initialize(); // ✅ Will be defined now
-          } else {
-            console.error('❌ initialize is still undefined');
-          }
+          throw new Error(`HTTP ${res.status}`);
         }
+        return res.json();
+      })
+      .then(data => {
+        console.log('✅ Auth validated, user data:', data);
+        
+        // Update localStorage with fresh user data
+        if (data) {
+          localStorage.setItem('typerrUser', JSON.stringify(data));
+          updateUserInfo(data);
+        }
+        
+        // Initialize the typing app
+        if (typeof initialize === 'function') {
+          initialize();
+        } else {
+          console.error('❌ initialize function not found');
+        }
+      })
+      .catch(err => {
+        console.error('❌ Auth validation failed:', err);
+        localStorage.removeItem('typerrToken');
+        localStorage.removeItem('typerrUser');
+        window.location.href = 'login.html';
       });
+    }
+
+    // Safe initialization that waits for all scripts to load
+    window.addEventListener('load', () => {
+      console.log('🚀 Page loaded, checking auth...');
+      checkAuthAndLoadUser();
     });
   </script>
 

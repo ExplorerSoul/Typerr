@@ -8,10 +8,10 @@ const profileSetupContainer = document.getElementById('profile-setup-container')
 const successContainer = document.getElementById('success-container');
 
 // Password requirement elements
-const reqLength = document.getElementById('req-length');
-const reqUppercase = document.getElementById('req-uppercase');
-const reqLowercase = document.getElementById('req-lowercase');
-const reqNumber = document.getElementById('req-number');
+let reqLength = document.getElementById('req-length');
+let reqUppercase = document.getElementById('req-uppercase');
+let reqLowercase = document.getElementById('req-lowercase');
+let reqNumber = document.getElementById('req-number');
 
 // Step indicators
 const step1 = document.getElementById('step-1');
@@ -24,6 +24,7 @@ const API_URL = 'https://typerr-backend.onrender.com/api';
 
 // Track if this is an edit session
 let isEditMode = false;
+let currentUser = null;
 
 // Check if user is authenticated
 function checkAuthStatus() {
@@ -39,33 +40,39 @@ function checkAuthStatus() {
     fetch(`${API_URL}/auth/validate`, {
         method: 'GET',
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
         }
     })
     .then(res => {
         if (!res.ok) {
-            // Token is invalid, redirect to login
-            localStorage.removeItem('typerrToken');
-            window.location.href = 'login.html';
-        } else {
-            // Token is valid, check if profile is already set up
-            return res.json();
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         }
+        return res.json();
     })
     .then(data => {
+        console.log('✅ Auth validation response:', data);
+        currentUser = data;
+        
         if (data && data.profileComplete) {
             // Profile is complete - this is edit mode
             isEditMode = true;
             updateUIForEditMode();
-            prefillUserData();
+            prefillUserData(data);
         } else {
-            // If user exists but profile is not complete, pre-fill email
-            prefillUserData();
+            // If user exists but profile is not complete, pre-fill available data
+            prefillUserData(data);
         }
     })
     .catch(err => {
-        console.error('Error validating authentication:', err);
+        console.error('❌ Error validating authentication:', err);
         showMessage('Authentication error. Please login again.', 'error');
+        // Clear invalid token and redirect
+        localStorage.removeItem('typerrToken');
+        localStorage.removeItem('typerrUser');
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 2000);
     });
 }
 
@@ -108,19 +115,25 @@ function updateUIForEditMode() {
 }
 
 // Pre-fill user data if available
-function prefillUserData() {
-    const userData = localStorage.getItem('typerrUser');
-    if (userData) {
-        try {
-            const user = JSON.parse(userData);
-            
-            // If username exists, pre-fill it
-            if (user.username) {
-                usernameInput.value = user.username;
+function prefillUserData(userData = null) {
+    // Use provided userData or fallback to localStorage
+    let user = userData;
+    
+    if (!user) {
+        const storedUserData = localStorage.getItem('typerrUser');
+        if (storedUserData) {
+            try {
+                user = JSON.parse(storedUserData);
+            } catch (e) {
+                console.error('Error parsing stored user data:', e);
+                return;
             }
-        } catch (e) {
-            console.error('Error parsing user data:', e);
         }
+    }
+    
+    if (user && user.username) {
+        usernameInput.value = user.username;
+        console.log('✅ Pre-filled username:', user.username);
     }
 }
 
@@ -172,8 +185,11 @@ function saveProfile(profileData) {
 
     console.log('📤 Sending profile data:', profileData);
 
-    fetch(`${API_URL}/users/profile`, {
-        method: 'POST',
+    const requestUrl = isEditMode ? `${API_URL}/users/profile/update` : `${API_URL}/users/profile`;
+    const requestMethod = isEditMode ? 'PUT' : 'POST';
+
+    fetch(requestUrl, {
+        method: requestMethod,
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
@@ -181,36 +197,40 @@ function saveProfile(profileData) {
         body: JSON.stringify(profileData)
     })
     .then(async response => {
-        const text = await response.text(); // Get raw response
-        console.log('📥 Raw response:', text);
-
-        // Try to parse JSON
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (err) {
-            throw new Error('Invalid JSON response');
+        console.log('📥 Response status:', response.status);
+        
+        if (response.status === 401) {
+            throw new Error('Unauthorized - Token expired or invalid');
         }
-
-        if (response.status === 401 || data.message === 'Unauthorized') {
-            throw new Error('Unauthorized');
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Error response:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
-
+        
+        return response.json();
+    })
+    .then(data => {
+        console.log('✅ Profile save response:', data);
+        
         if (data.error) {
             showMessage(data.error, 'error');
             return;
         }
 
-        // ✅ Save updated user/token if present
+        // Update stored user data with new information
         if (data.user) {
             localStorage.setItem('typerrUser', JSON.stringify(data.user));
+            console.log('✅ Updated user data in localStorage:', data.user);
         }
 
+        // Update token if provided
         if (data.token) {
             localStorage.setItem('typerrToken', data.token);
         }
 
-        // ✅ Show success and redirect
+        // Show success and redirect
         profileSetupContainer.style.display = 'none';
         successContainer.style.display = 'block';
         
@@ -232,13 +252,23 @@ function saveProfile(profileData) {
     })
     .catch(err => {
         console.error('❌ saveProfile error:', err);
-        if (err.message === 'Unauthorized') {
+        
+        if (err.message.includes('Unauthorized') || err.message.includes('401')) {
             showMessage('Your session has expired. Please login again.', 'error');
             localStorage.removeItem('typerrToken');
-            window.location.href = 'login.html';
+            localStorage.removeItem('typerrUser');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
         } else {
-            showMessage('An error occurred while saving your profile. Please try again.', 'error');
+            showMessage(`Error saving profile: ${err.message}`, 'error');
         }
+    })
+    .finally(() => {
+        // Reset button state
+        const saveButton = document.getElementById('save-profile-btn');
+        saveButton.disabled = false;
+        saveButton.textContent = isEditMode ? 'Update Profile' : 'Save Profile';
     });
 }
 
@@ -270,44 +300,37 @@ profileForm.addEventListener('submit', function(e) {
         }
     }
     
-    // In edit mode, if password is empty, don't send it
-    if (isEditMode && password === '' && confirmPassword === '') {
-        // Only send username for update
-        var profileData = {
-            username
-        };
-    } else {
-        // Send both username and password
-        var profileData = {
-            username,
-            password
-        };
+    // Prepare profile data
+    let profileData = { username };
+    
+    // In edit mode, only include password if it's being changed
+    if (!isEditMode || (password !== '' && confirmPassword !== '')) {
+        profileData.password = password;
     }
+    
+    console.log('📤 Profile data to send:', profileData);
     
     // Show loading state
     const saveButton = document.getElementById('save-profile-btn');
-    const originalButtonText = saveButton.textContent;
     saveButton.disabled = true;
     saveButton.textContent = isEditMode ? 'Updating...' : 'Saving...';
     
     // Save profile
     saveProfile(profileData);
-
-    // Reset button state after 10 seconds if not already changed by the saveProfile function
-    setTimeout(() => {
-        if (saveButton.textContent === (isEditMode ? 'Updating...' : 'Saving...')) {
-            saveButton.disabled = false;
-            saveButton.textContent = originalButtonText;
-        }
-    }, 10000);
 });
 
-passwordInput.addEventListener('input', validatePassword);
+// Add password validation on input
+if (passwordInput) {
+    passwordInput.addEventListener('input', validatePassword);
+}
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Profile page loaded');
     checkAuthStatus();
     
     // Mark first step as complete
-    step1.classList.add('complete');
+    if (step1) {
+        step1.classList.add('complete');
+    }
 });
